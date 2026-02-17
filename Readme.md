@@ -1,9 +1,11 @@
 # Prompt-Level Mechanistic Transparency (PLMT)
 
+
 This project explains why a model emits a token for a prompt by tracing internal computation, especially component activations and residual stream updates in `gpt2-small`.
 
 ## Current Status
 
+![PLMT Overview](pics/image.png)
 This project is still a foundation and work in progress.
 
 Right now, we can reliably track which internal components activate during inference for a given prompt and visualize residual-flow-related signals. We can also measure component contributions and run targeted ablations.
