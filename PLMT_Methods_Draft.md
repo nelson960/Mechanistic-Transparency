@@ -2,7 +2,7 @@
 
 ## 1. Objective and Scope
 
-Given a prompt \(x\) and generated response tokens \(y_{1:T}\), we estimate a **Prompt->Response Transparency Graph** that explains each target token decision \(y_t\) using internal model components and source tokens, then validate the explanation with **internal counterfactual interventions**.
+Given a prompt \(x\) and generated response tokens \(y_{1:T}\), I estimate a **Prompt->Response Transparency Graph** that explains each target token decision \(y_t\) using internal model components and source tokens, then validate the explanation with **internal counterfactual interventions**.
 
 Primary claim tested in this section:
 
@@ -249,4 +249,3 @@ Use this fixed block unless a study-specific change is justified:
 - Basis dependence: feature-level analyses are representation-dependent; report basis choice and stability checks.
 - Intervention realism: zero ablation can be out-of-distribution; include mean-replacement sensitivity analysis.
 - Residual linearization limits: LayerNorm and nonlinear paths can induce approximation error; bounded by reported reconstruction and calibration metrics.
-
