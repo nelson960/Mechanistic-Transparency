@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Model Graph 3D Viewer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <aside id="panel">
+      <h1>Model Graph Viewer</h1>
+      <p>Interactive structural map + token decision diagnostics.</p>
+
+      <div class="panel-box">
+        <div class="stat-grid">
+          <div>Nodes: <span id="node-count">0</span></div>
+          <div>Edges: <span id="edge-count">0</span></div>
+          <div>Kinds: <span id="kind-count">0</span></div>
+          <div>Prompts: <span id="prompt-count">0</span></div>
+        </div>
+        <div id="map-stats" class="small" style="margin-top:6px;">No graph loaded.</div>
+      </div>
+
+      <div class="panel-box">
+        <h2>Controls</h2>
+        <div class="row">
+          <label class="small" for="complexity-select">Complexity</label>
+          <select id="complexity-select">
+            <option value="simple">Simple</option>
+            <option value="medium">Medium</option>
+            <option value="full" selected>Full</option>
+          </select>
+        </div>
+
+        <div class="small" style="margin-top:7px;">Node Kinds</div>
+        <div id="kind-toggles"></div>
+
+        <div class="row" style="margin-top:8px;">
+          <input id="node-search" type="search" placeholder="Find node id (L9_H3, L10_attn)" />
+        </div>
+
+        <div class="row">
+          <input id="bundle-file" type="file" accept=".json,.jsonl,application/json,text/plain" />
+        </div>
+
+        <div class="row">
+          <button id="load-demo" type="button">Load Demo Graph</button>
+          <span class="small" id="status">Load `viewer_payload.json` or `component_tracker.jsonl`.</span>
+        </div>
+
+        <div class="row">
+          <button id="find-btn" type="button">Find</button>
+          <button id="reset-camera" type="button">Reset Camera</button>
+          <button id="clear-selection" type="button">Clear Selection</button>
+          <span class="badge" id="selection-badge">No selection</span>
+        </div>
+
+        <div class="row" style="margin-top:8px;">
+          <label class="small" for="decision-select">Decision</label>
+          <select id="decision-select"></select>
+        </div>
+      </div>
+
+      <div class="panel-box" id="why-panel">
+        <h2>Why This Token?</h2>
+        <pre id="why-summary">Load viewer_payload.json</pre>
+
+        <div class="small" style="margin-top:8px;">Top Supporting Components</div>
+        <div id="support-list" class="component-list"></div>
+
+        <div class="small" style="margin-top:8px;">Top Opposing Components</div>
+        <div id="oppose-list" class="component-list"></div>
+
+        <div class="small" style="margin-top:8px;">Top-3 Causal Paths</div>
+        <div id="paths-list"></div>
+      </div>
+
+      <div class="panel-box" id="flow-panel">
+        <h2>Activation Flow</h2>
+        <div class="row">
+          <button id="prev-decision-btn" type="button">Prev</button>
+          <button id="next-decision-btn" type="button">Next</button>
+          <span class="badge" id="decision-badge">No decision</span>
+        </div>
+        <div class="row">
+          <button id="flow-play-btn" type="button">Play</button>
+          <button id="flow-step-btn" type="button">Step</button>
+          <button id="flow-reset-btn" type="button">Reset</button>
+          <label class="small" for="flow-speed-select">Speed</label>
+          <select id="flow-speed-select">
+            <option value="0.75">0.75x</option>
+            <option value="1" selected>1x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+          </select>
+        </div>
+        <div class="row">
+          <input id="flow-progress" type="range" min="0" max="0" step="1" value="0" />
+        </div>
+        <div class="small" id="flow-step-caption">Load tracker data to build activation flow.</div>
+        <div id="flow-steps" class="flow-step-list"></div>
+      </div>
+
+      <div class="panel-box" id="equation-panel">
+        <h2>Equation Panel</h2>
+        <pre id="equation-text">Load tracker data to compute equations.</pre>
+        <div class="small" style="margin-top:8px;">Margin Trace Across Layers</div>
+        <canvas id="margin-chart" width="400" height="146"></canvas>
+      </div>
+
+      <div class="panel-box" id="residual-panel">
+        <h2>Layer-by-layer Residual</h2>
+        <div class="row">
+          <button id="resid-play-btn" type="button">Play</button>
+          <button id="resid-step-btn" type="button">Step</button>
+          <button id="resid-reset-btn" type="button">Reset</button>
+        </div>
+        <div class="row">
+          <input id="resid-progress" type="range" min="0" max="0" step="1" value="0" />
+        </div>
+        <div class="small" id="resid-caption">Load tracker data to animate residual updates.</div>
+        <div id="resid-layer-bars" class="layer-bars"></div>
+      </div>
+
+      <div class="panel-box" id="sankey-panel">
+        <h2>Token -> Head -> Residual -> Logit</h2>
+        <canvas id="sankey-canvas" width="400" height="220"></canvas>
+        <div class="small" id="sankey-caption">Load tracker data to render causal flow.</div>
+      </div>
+
+      <div class="panel-box" id="counterfactual-panel">
+        <h2>Counterfactual Controls</h2>
+        <div class="small" id="counterfactual-summary">Toggle component ablations to estimate margin/top-token change.</div>
+        <div class="row">
+          <button id="counter-clear-btn" type="button">Clear Ablations</button>
+        </div>
+        <div id="counterfactual-components" class="component-list"></div>
+      </div>
+
+      <div class="panel-box" id="token-panel">
+        <h2>Token Links</h2>
+        <div class="small" id="token-link-title">Select a component/head node.</div>
+        <div id="token-links"></div>
+      </div>
+
+      <div class="panel-box" id="selection">
+        <h2>Selection</h2>
+        <pre id="node-inspect">Click a node to inspect.</pre>
+      </div>
+
+      <div id="help">
+        Left drag: rotate<br/>
+        Wheel: zoom<br/>
+        Right drag or Shift+left: pan
+      </div>
+    </aside>
+
+    <main id="view"></main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

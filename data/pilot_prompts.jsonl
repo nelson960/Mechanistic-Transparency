@@ -1,0 +1,12 @@
+{"id":"copy_001","task":"copy","prompt":"The secret code is 48291. Repeat the secret code exactly:"}
+{"id":"copy_002","task":"copy","prompt":"Remember this word: marigold. Write the remembered word:"}
+{"id":"coref_001","task":"coreference","prompt":"Alice gave Bob her notebook. Who received the notebook?"}
+{"id":"coref_002","task":"coreference","prompt":"Maya called Priya because she was late. Who was late?"}
+{"id":"twohop_001","task":"two_hop","prompt":"A robin is a bird. A bird is an animal. Therefore, a robin is a"}
+{"id":"twohop_002","task":"two_hop","prompt":"Paris is in France. France is in Europe. Paris is in"}
+{"id":"arith_001","task":"arithmetic","prompt":"Compute 17 + 25 ="}
+{"id":"arith_002","task":"arithmetic","prompt":"Compute 9 * 7 ="}
+{"id":"constraint_001","task":"constraint","prompt":"Answer with one word only. The opposite of cold is"}
+{"id":"constraint_002","task":"constraint","prompt":"Answer with one city only. The capital of Japan is"}
+{"id":"retrieval_001","task":"retrieval","prompt":"Facts: color=blue, shape=circle, animal=fox. What is the animal?"}
+{"id":"retrieval_002","task":"retrieval","prompt":"Facts: user=ana, plan=premium, region=west. What is the region?"}
