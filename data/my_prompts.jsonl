@@ -1,4 +1,0 @@
-{"id":"my_copy_001","task":"copy","prompt":"The secret code is 73914. Repeat the secret code exactly:"}
-{"id":"my_coref_001","task":"coreference","prompt":"Alice gave Bob her notebook. Who received the notebook?"}
-{"id":"my_twohop_001","task":"two_hop","prompt":"Paris is in France. France is in Europe. Paris is in"}
-{"id":"my_arith_001","task":"arithmetic","prompt":"Compute 17 + 25 ="}

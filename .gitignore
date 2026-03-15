@@ -18,12 +18,15 @@ env/
 build/
 dist/
 *.egg-info/
+*.json
 
 # Test and coverage artifacts
 .coverage
 .coverage.*
 coverage.xml
 htmlcov/
+models/*
+data/*
 
 # Project-generated artifacts
 outputs/
