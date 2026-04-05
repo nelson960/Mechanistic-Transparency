@@ -1,0 +1,52 @@
+{
+  "name": "KV-Retrieve-3",
+  "seed": 7,
+  "vocabulary": {
+    "special": [
+      "<bos>",
+      ";",
+      "Q",
+      "->"
+    ],
+    "keys": [
+      "K0",
+      "K1",
+      "K2",
+      "K3",
+      "K4",
+      "K5",
+      "K6",
+      "K7"
+    ],
+    "values": [
+      "V0",
+      "V1",
+      "V2",
+      "V3",
+      "V4",
+      "V5",
+      "V6",
+      "V7"
+    ]
+  },
+  "splits": {
+    "train": 5000,
+    "val": 500,
+    "test": 500,
+    "test_ood_4_pairs": 500
+  },
+  "sequence_format": "<bos> K_a V_b ; K_c V_d ; K_e V_f ; Q K_x ->",
+  "target": "Single next-token prediction of the queried value token.",
+  "generation_rules": {
+    "keys_per_example": 3,
+    "values_per_example": 3,
+    "keys_are_distinct": true,
+    "values_are_distinct": true,
+    "query_key_sampled_from_context": true,
+    "pair_order_shuffled": true
+  },
+  "ood_rule": {
+    "num_pairs": 4,
+    "description": "Longer-context OOD split with more context pairs."
+  }
+}

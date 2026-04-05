@@ -1,0 +1,59 @@
+{
+  "benchmark_name": "story_text_circuit_origins",
+  "text_path": "dataset/phase2/random_story_dataset_v1.txt",
+  "run_dir": "runs/story_text_circuit_run_001",
+  "dataset": {
+    "context_length": 24,
+    "ood_context_length": 40,
+    "stride": 1,
+    "train_fraction": 0.8,
+    "val_fraction": 0.1,
+    "sweep_base_limit": 32,
+    "derived_dataset_dir": "runs/story_text_circuit_run_001/derived_dataset"
+  },
+  "model": {
+    "d_model": 32,
+    "n_heads": 2,
+    "d_ff": 64,
+    "n_layers": 2,
+    "max_seq_len": 64
+  },
+  "training": {
+    "epochs": 150,
+    "batch_size": 32,
+    "eval_batch_size": 128,
+    "learning_rate": 0.01,
+    "weight_decay": 0.0,
+    "seed": 0,
+    "device": "cpu"
+  },
+  "checkpoint_schedule": {
+    "dense_through_epoch": 20,
+    "log_spaced_epoch_count": 24,
+    "save_epoch_zero": true,
+    "save_final": true,
+    "best_metric": "val_accuracy"
+  },
+  "battery": {
+    "train_probe_limit": 128,
+    "sae_train_limit": 128,
+    "sae_val_limit": 64,
+    "sae_hidden_multiplier": 2,
+    "sae_l1_coeff": 0.001,
+    "sae_learning_rate": 0.01,
+    "sae_batch_size": 64,
+    "sae_epochs": 5,
+    "top_features_per_site": 5,
+    "superposition_cosine_threshold": 0.2,
+    "role_top_k": 3
+  },
+  "summary_thresholds": {
+    "behavior_birth_val_accuracy": 0.9,
+    "variable_birth_score": 0.85,
+    "variable_family_min_score": 0.75,
+    "operator_birth_score": 0.85,
+    "operator_family_min_score": 0.75,
+    "faithfulness_birth_score": 0.85,
+    "faithfulness_family_min_score": 0.75
+  }
+}

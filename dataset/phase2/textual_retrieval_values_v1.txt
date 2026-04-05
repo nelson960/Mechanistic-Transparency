@@ -1,0 +1,16 @@
+amber
+linen
+cedar
+bronze
+coral
+silver
+slate
+pearl
+onyx
+saffron
+velvet
+copper
+marble
+moss
+indigo
+granite

@@ -41,7 +41,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dataset-dir",
         type=Path,
-        default=Path("dataset/kv_retrieve_3"),
+        default=Path("dataset/phase2/kv_retrieve_3"),
     )
     parser.add_argument("--split", type=str, default=None)
     parser.add_argument("--row-index", type=int, default=None)

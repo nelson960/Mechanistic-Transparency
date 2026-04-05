@@ -1,0 +1,6 @@
+row_kind,layer_index,head_index,head_name,baseline_accuracy,ablated_accuracy,accuracy_drop,baseline_margin,ablated_margin,margin_drop,supported,reason,routing_candidate,copy_candidate
+head_ablation,0.0,0.0,block1_head0,1.0,1.0,0.0,23.288640400767328,23.80314078181982,-0.5145003810524926,,,,
+head_ablation,0.0,1.0,block1_head1,1.0,0.3171875,0.6828125,23.288640400767328,-5.228261576592923,28.51690197736025,,,,
+head_ablation,1.0,0.0,block2_head0,1.0,0.9328125,0.06718749999999996,23.288640400767328,7.655649049207568,15.63299135155976,,,,
+head_ablation,1.0,1.0,block2_head1,1.0,0.988671875,0.011328125000000022,23.288640400767328,11.599898797646166,11.688741603121162,,,,
+status,,,,,,,,,,False,Selected routing and copy candidates are not adjacent layers,block2_head0,block2_head0

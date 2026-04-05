@@ -1,0 +1,9 @@
+title: Mechanistic Transformer Circuits
+description: Empirical evidence for staged retrieval motif formation in small transformers trained on controlled in-context retrieval tasks.
+theme: minima
+markdown: kramdown
+lang: en
+plugins:
+  - jekyll-seo-tag
+header_pages:
+  - reproducibility.md

@@ -1,0 +1,7 @@
+intervention_signature,role_name,run_id_left,seed_left,run_id_right,seed_right,candidate_left,candidate_right,same_candidate_identity,top_k_overlap_count,top_k_overlap_fraction,candidate_left_rank_in_right,candidate_right_rank_in_left,candidate_left_score,candidate_right_score,score_profile_cosine
+none,copy,baseline_seed0_curriculum_on_d64_l2,0,baseline_seed1_curriculum_on_d64_l2,1,block2_head1,block2_head1,True,2,0.6666666666666666,1,1,0.857421875,0.951953125,0.9139797499222224
+none,copy,baseline_seed0_curriculum_on_d64_l2,0,baseline_seed2_curriculum_on_d64_l2,2,block2_head1,block2_head0,False,2,0.6666666666666666,4,2,0.857421875,0.978515625,0.5785570773093427
+none,copy,baseline_seed1_curriculum_on_d64_l2,1,baseline_seed2_curriculum_on_d64_l2,2,block2_head1,block2_head0,False,2,0.6666666666666666,4,2,0.951953125,0.978515625,0.767133760990718
+none,routing,baseline_seed0_curriculum_on_d64_l2,0,baseline_seed1_curriculum_on_d64_l2,1,block2_head1,block2_head1,True,2,0.6666666666666666,1,1,1.0,1.0,0.999893404899563
+none,routing,baseline_seed0_curriculum_on_d64_l2,0,baseline_seed2_curriculum_on_d64_l2,2,block2_head1,block2_head0,False,2,0.6666666666666666,2,2,1.0,0.91875,0.9802746041147911
+none,routing,baseline_seed1_curriculum_on_d64_l2,1,baseline_seed2_curriculum_on_d64_l2,2,block2_head1,block2_head0,False,3,1.0,2,2,1.0,0.91875,0.9792993931262104

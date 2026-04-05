@@ -1,0 +1,17 @@
+{
+  "target_dir": "runs/story_text_circuit_run_001",
+  "num_runs": 1,
+  "num_checkpoints": 47,
+  "num_neuron_rows": 6956,
+  "num_feature_rows": 52311,
+  "num_superposition_rows": 1175,
+  "num_representation_drift_rows": 27025,
+  "num_operator_handoff_rows": 92,
+  "behavior_birth_runs": 0,
+  "routing_birth_runs": 0,
+  "copy_birth_runs": 0,
+  "previous_token_faithfulness_birth_runs": 0,
+  "target_seen_in_context_faithfulness_birth_runs": 0,
+  "repeat_distance_bucket_faithfulness_birth_runs": 0,
+  "target_token_faithfulness_birth_runs": 0
+}

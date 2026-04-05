@@ -1,0 +1,19 @@
+{
+  "target_dir": "runs/kv_textual_balanced_v1/pilot_seed0_curriculum_on_d64_l2",
+  "num_runs": 1,
+  "num_checkpoints": 47,
+  "num_neuron_rows": 940,
+  "num_feature_rows": 564,
+  "num_superposition_rows": 564,
+  "num_representation_drift_rows": 27025,
+  "num_operator_handoff_rows": 92,
+  "num_role_matching_rows": 0,
+  "num_clamp_responsiveness_rows": 0,
+  "behavior_birth_runs": 1,
+  "query_faithfulness_birth_runs": 0,
+  "matching_slot_faithfulness_birth_runs": 0,
+  "selected_value_faithfulness_birth_runs": 0,
+  "routing_birth_runs": 0,
+  "copy_birth_runs": 0,
+  "routing_before_copy_runs": 0
+}

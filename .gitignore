@@ -18,18 +18,31 @@ env/
 build/
 dist/
 *.egg-info/
-*.json
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+docs/_site/
+site/
 
 # Test and coverage artifacts
 .coverage
 .coverage.*
 coverage.xml
 htmlcov/
-models/*
 data/*
+
+# Local experiment outputs
+runs/*
+research/phase3/runs/*
+models/models--gpt2/
+*.log
+
+# Local research datasets regenerated from manifests/scripts
+dataset/phase3/
 
 # Project-generated artifacts
 outputs/
+pics/
 
 # Editor and OS files
 .DS_Store

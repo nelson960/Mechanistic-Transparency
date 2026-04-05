@@ -53,9 +53,12 @@ def load_dataset_bundle(dataset_dir: Path) -> DatasetBundle:
     )
     token_to_id = {token: idx for idx, token in enumerate(vocab)}
     id_to_token = {idx: token for token, idx in token_to_id.items()}
+    split_names = metadata.get("splits")
+    if not isinstance(split_names, dict) or not split_names:
+        raise ValueError(f"Dataset metadata must contain a non-empty 'splits' object: {metadata_path}")
     raw_splits = {
         name: read_jsonl(dataset_dir / f"{name}.jsonl")
-        for name in ["train", "val", "test", "test_ood_4_pairs"]
+        for name in split_names
     }
 
     return DatasetBundle(
@@ -936,17 +939,24 @@ def forward_with_qkv_patch(
     invalid_components = sorted(component_set - {"q", "k", "v"})
     if invalid_components:
         raise ValueError(f"Invalid Q/K/V patch components: {invalid_components}")
-    if destination_layer_index <= 0:
-        raise ValueError("Q/K/V patching requires a destination head that is not in the first layer.")
+    if destination_layer_index < 0 or destination_layer_index >= len(model.blocks):
+        raise ValueError(f"Invalid destination layer index {destination_layer_index}")
 
-    resid = corrupt_cache["blocks"][destination_layer_index - 1]["resid_after_mlp"].to(
-        device=model.token_embed.weight.device,
-        dtype=model.token_embed.weight.dtype,
-    )
-    clean_resid = clean_cache["blocks"][destination_layer_index - 1]["resid_after_mlp"].to(
-        device=resid.device,
-        dtype=resid.dtype,
-    )
+    if destination_layer_index == 0:
+        resid = model.token_embed(input_ids)
+        clean_resid = clean_cache["token_embed"].to(
+            device=resid.device,
+            dtype=resid.dtype,
+        )
+    else:
+        resid = corrupt_cache["blocks"][destination_layer_index - 1]["resid_after_mlp"].to(
+            device=model.token_embed.weight.device,
+            dtype=model.token_embed.weight.dtype,
+        )
+        clean_resid = clean_cache["blocks"][destination_layer_index - 1]["resid_after_mlp"].to(
+            device=resid.device,
+            dtype=resid.dtype,
+        )
 
     block = model.blocks[destination_layer_index]
     attn = block.attn
@@ -1115,18 +1125,27 @@ def build_qkv_patched_attention_table(
     invalid_components = sorted(component_set - {"q", "k", "v"})
     if invalid_components:
         raise ValueError(f"Invalid Q/K/V patch components: {invalid_components}")
-    if destination_layer_index <= 0:
-        raise ValueError("Q/K/V patching requires a destination head that is not in the first layer.")
-
     prompt_tokens = prompt.split()
-    corrupt_resid = corrupt_cache["blocks"][destination_layer_index - 1]["resid_after_mlp"].to(
-        device=model.token_embed.weight.device,
-        dtype=model.token_embed.weight.dtype,
-    )
-    clean_resid = clean_cache["blocks"][destination_layer_index - 1]["resid_after_mlp"].to(
-        device=corrupt_resid.device,
-        dtype=corrupt_resid.dtype,
-    )
+    if destination_layer_index < 0 or destination_layer_index >= len(model.blocks):
+        raise ValueError(f"Invalid destination layer index {destination_layer_index}")
+    if destination_layer_index == 0:
+        corrupt_resid = corrupt_cache["token_embed"].to(
+            device=model.token_embed.weight.device,
+            dtype=model.token_embed.weight.dtype,
+        )
+        clean_resid = clean_cache["token_embed"].to(
+            device=corrupt_resid.device,
+            dtype=corrupt_resid.dtype,
+        )
+    else:
+        corrupt_resid = corrupt_cache["blocks"][destination_layer_index - 1]["resid_after_mlp"].to(
+            device=model.token_embed.weight.device,
+            dtype=model.token_embed.weight.dtype,
+        )
+        clean_resid = clean_cache["blocks"][destination_layer_index - 1]["resid_after_mlp"].to(
+            device=corrupt_resid.device,
+            dtype=corrupt_resid.dtype,
+        )
 
     block = model.blocks[destination_layer_index]
     attn = block.attn

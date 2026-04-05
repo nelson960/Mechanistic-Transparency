@@ -1,0 +1,85 @@
+{
+  "benchmark": {
+    "name": "kv_retrieval"
+  },
+  "dataset": {
+    "dataset_dir": "dataset/phase2/kv_retrieve_textual_balanced_v1",
+    "train_split_by_pairs": {
+      "2": "train_2_pairs",
+      "3": "train_3_pairs"
+    },
+    "eval_splits": {
+      "val": "val",
+      "test": "test",
+      "ood": "test_ood_4_pairs"
+    },
+    "sweep_base_split": "test"
+  },
+  "model": {
+    "d_model": 64,
+    "n_heads": 2,
+    "d_ff": 128,
+    "n_layers": 2,
+    "max_seq_len": 16
+  },
+  "training": {
+    "epochs": 150,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0,
+    "seed": 0,
+    "curriculum": "on",
+    "device": "cpu"
+  },
+  "checkpoint_schedule": {
+    "dense_through_epoch": 30,
+    "log_spaced_epoch_count": 24,
+    "save_epoch_zero": true,
+    "save_final": true,
+    "best_metric": "val_accuracy"
+  },
+  "battery": {
+    "train_probe_limit": 1024,
+    "sweep_base_limit": 128,
+    "eval_batch_size": 256,
+    "role_top_k": 3
+  },
+  "sae_tracking": {
+    "enabled": true,
+    "sites": [
+      "block1_final_resid_after_mlp",
+      "block1_final_mlp_out",
+      "block1_head0_final_q",
+      "block1_head0_final_v",
+      "block1_head1_final_v",
+      "block2_final_resid_after_mlp",
+      "block2_final_mlp_out",
+      "block2_head0_final_q",
+      "block2_head0_final_resid_contribution",
+      "block2_head1_final_q",
+      "block2_head1_final_resid_contribution",
+      "final_hidden"
+    ],
+    "train_limit": 1024,
+    "val_limit": 256,
+    "hidden_multiplier": 2,
+    "l1_coeff": 0.001,
+    "learning_rate": 0.01,
+    "batch_size": 128,
+    "epochs": 5,
+    "seed": 0,
+    "top_features_per_site": 5,
+    "superposition_cosine_threshold": 0.2
+  },
+  "training_interventions": [],
+  "summary_thresholds": {
+    "behavior_birth_val_accuracy": 0.9,
+    "operator_birth_score": 0.85,
+    "operator_family_min_score": 0.75,
+    "variable_birth_score": 0.85,
+    "variable_family_min_score": 0.75,
+    "faithfulness_birth_score": 0.85,
+    "faithfulness_family_min_score": 0.75
+  },
+  "output_dir": "runs/kv_textual_balanced_v1/curriculum_on/baseline_seed0_curriculum_on_d64_l2"
+}

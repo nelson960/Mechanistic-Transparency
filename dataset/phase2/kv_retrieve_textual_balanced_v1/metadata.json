@@ -1,0 +1,84 @@
+{
+  "name": "kv_retrieve_textual_balanced_v1",
+  "seed": 17,
+  "vocabulary": {
+    "special": [
+      "<bos>",
+      ";",
+      "Q",
+      "->"
+    ],
+    "keys": [
+      "Mara",
+      "Ivo",
+      "Sera",
+      "Niko",
+      "Tali",
+      "Bram",
+      "Oren",
+      "Leda",
+      "Enzo",
+      "Mira",
+      "Cato",
+      "Rhea",
+      "Kian",
+      "Lyra",
+      "Veda",
+      "Dima"
+    ],
+    "values": [
+      "amber",
+      "linen",
+      "cedar",
+      "bronze",
+      "coral",
+      "silver",
+      "slate",
+      "pearl",
+      "onyx",
+      "saffron",
+      "velvet",
+      "copper",
+      "marble",
+      "moss",
+      "indigo",
+      "granite"
+    ]
+  },
+  "splits": {
+    "train_2_pairs": 30000,
+    "train_3_pairs": 30000,
+    "val": 3000,
+    "test": 3000,
+    "test_ood_4_pairs": 3000
+  },
+  "training_splits": {
+    "2": "train_2_pairs",
+    "3": "train_3_pairs"
+  },
+  "sequence_format": "<bos> key_a value_b ; key_c value_d ; key_e value_f ; Q key_x ->",
+  "target": "Single next-token prediction of the queried value token.",
+  "generation_rules": {
+    "train_context_pairs": [
+      2,
+      3
+    ],
+    "id_context_pairs": 3,
+    "values_per_example": 3,
+    "keys_are_distinct": true,
+    "values_are_distinct": true,
+    "query_key_sampled_from_context": true,
+    "pair_order_shuffled": true,
+    "query_slot_policy": "balanced",
+    "allow_duplicate_prompts": false,
+    "max_attempt_multiplier": 200
+  },
+  "ood_rule": {
+    "num_pairs": 4,
+    "description": "Longer-context OOD split with more context pairs."
+  },
+  "vocabulary_sources": {
+    "keys_file": "dataset/phase2/textual_retrieval_keys_v1.txt",
+    "values_file": "dataset/phase2/textual_retrieval_values_v1.txt"
+  }
+}

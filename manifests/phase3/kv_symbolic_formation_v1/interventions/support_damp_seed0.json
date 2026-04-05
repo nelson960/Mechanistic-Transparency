@@ -1,0 +1,114 @@
+{
+  "benchmark": {
+    "name": "kv_retrieval"
+  },
+  "dataset": {
+    "dataset_dir": "dataset/phase3/kv_symbolic_balanced_v1",
+    "train_split_by_pairs": {
+      "2": "train",
+      "3": "train"
+    },
+    "eval_splits": {
+      "val": "val",
+      "test": "test",
+      "ood": "test_ood_3_pairs"
+    },
+    "sweep_base_split": "test"
+  },
+  "model": {
+    "d_model": 64,
+    "n_heads": 2,
+    "d_ff": 128,
+    "n_layers": 2,
+    "max_seq_len": 13
+  },
+  "training": {
+    "epochs": 100,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0,
+    "seed": 0,
+    "curriculum": "off",
+    "device": "cpu"
+  },
+  "checkpoint_schedule": {
+    "dense_through_epoch": 30,
+    "log_spaced_epoch_count": 20,
+    "save_epoch_zero": true,
+    "save_final": true,
+    "best_metric": "val_accuracy"
+  },
+  "battery": {
+    "train_probe_limit": 256,
+    "sweep_base_limit": 64,
+    "eval_batch_size": 256,
+    "role_top_k": 3
+  },
+  "sae_tracking": {
+    "enabled": false,
+    "sites": [],
+    "train_limit": 1,
+    "val_limit": 1,
+    "hidden_multiplier": 1,
+    "l1_coeff": 0.001,
+    "learning_rate": 0.01,
+    "batch_size": 16,
+    "epochs": 1,
+    "seed": 0,
+    "top_features_per_site": 1,
+    "superposition_cosine_threshold": 0.2
+  },
+  "formation": {
+    "enabled": true,
+    "log_every_steps": 50,
+    "eval_pack_size": 64,
+    "gradient_family_interval": 200,
+    "candidate_mode": "fixed",
+    "candidate_support_head": {
+      "layer_index": 0,
+      "head_index": 0
+    },
+    "candidate_retrieval_head": {
+      "layer_index": 1,
+      "head_index": 1
+    },
+    "candidate_placebo_head": {
+      "layer_index": 0,
+      "head_index": 1
+    },
+    "measure_qk_margin": true,
+    "measure_ov_lift": true,
+    "measure_path_gain": true,
+    "measure_correct_slot_attention": true,
+    "save_family_gradients": true,
+    "save_logit_decomposition": true,
+    "transition_metric_name": "R",
+    "transition_metric_delta": 0.1,
+    "transition_boost_steps": 10,
+    "q_birth_accuracy": 0.9,
+    "r_birth_accuracy": 0.9,
+    "w_birth_accuracy": 0.9
+  },
+  "training_interventions": [
+    {
+      "name": "early_support_damp",
+      "kind": "head_resid_final_scale",
+      "layer_index": 0,
+      "head_index": 0,
+      "epoch_start": 1,
+      "epoch_end": 20,
+      "scale": 0.0,
+      "position": "final"
+    }
+  ],
+  "summary_thresholds": {
+    "behavior_birth_val_accuracy": 0.9,
+    "operator_birth_score": 0.85,
+    "operator_family_min_score": 0.75,
+    "variable_birth_score": 0.85,
+    "variable_family_min_score": 0.75,
+    "faithfulness_birth_score": 0.85,
+    "faithfulness_family_min_score": 0.75
+  },
+  "output_dir": "research/phase3/runs/kv_symbolic_formation_v1/baseline/baseline_seed0_off_d64_l2_discovered__early_support_damp"
+}

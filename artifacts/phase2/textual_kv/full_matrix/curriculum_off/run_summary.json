@@ -1,0 +1,19 @@
+{
+  "target_dir": "runs/kv_textual_balanced_v1/curriculum_off",
+  "num_runs": 3,
+  "num_checkpoints": 190,
+  "num_neuron_rows": 3800,
+  "num_feature_rows": 2280,
+  "num_superposition_rows": 2280,
+  "num_representation_drift_rows": 148650,
+  "num_operator_handoff_rows": 374,
+  "num_role_matching_rows": 6,
+  "num_clamp_responsiveness_rows": 0,
+  "behavior_birth_runs": 3,
+  "query_faithfulness_birth_runs": 3,
+  "matching_slot_faithfulness_birth_runs": 1,
+  "selected_value_faithfulness_birth_runs": 3,
+  "routing_birth_runs": 3,
+  "copy_birth_runs": 3,
+  "routing_before_copy_runs": 0
+}

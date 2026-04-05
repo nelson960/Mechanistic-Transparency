@@ -1,0 +1,10 @@
+run_id,metric_name,birth_epoch,birth_checkpoint_id
+pilot_seed0_curriculum_on_d64_l2,behavior_val_accuracy,28.0,best_val_epoch_028
+pilot_seed0_curriculum_on_d64_l2,variable_query_key,,
+pilot_seed0_curriculum_on_d64_l2,faithfulness_query_key,,
+pilot_seed0_curriculum_on_d64_l2,variable_matching_slot,,
+pilot_seed0_curriculum_on_d64_l2,faithfulness_matching_slot,,
+pilot_seed0_curriculum_on_d64_l2,variable_selected_value,,
+pilot_seed0_curriculum_on_d64_l2,faithfulness_selected_value,,
+pilot_seed0_curriculum_on_d64_l2,operator_routing,,
+pilot_seed0_curriculum_on_d64_l2,operator_copy,,
