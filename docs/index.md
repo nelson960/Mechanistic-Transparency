@@ -60,7 +60,7 @@ Across the training-dynamics experiments, the repository uses a small decoder-on
 
 Core model implementation:
 
-- `scripts/tiny_transformer_core.py`
+- [`scripts/tiny_transformer_core.py`]({{ site.repository_url }}/blob/main/scripts/tiny_transformer_core.py)
 
 The standard workflow is:
 
@@ -72,10 +72,10 @@ The standard workflow is:
 
 Core scripts:
 
-- `scripts/train_run.py`
-- `scripts/run_checkpoint_battery.py`
-- `scripts/summarize_training_dynamics.py`
-- `scripts/visualize_kv_circuit_dynamics.py`
+- [`scripts/train_run.py`]({{ site.repository_url }}/blob/main/scripts/train_run.py)
+- [`scripts/run_checkpoint_battery.py`]({{ site.repository_url }}/blob/main/scripts/run_checkpoint_battery.py)
+- [`scripts/summarize_training_dynamics.py`]({{ site.repository_url }}/blob/main/scripts/summarize_training_dynamics.py)
+- [`scripts/visualize_kv_circuit_dynamics.py`]({{ site.repository_url }}/blob/main/scripts/visualize_kv_circuit_dynamics.py)
 
 ## What Is Recorded
 
@@ -111,7 +111,7 @@ These measurements answer different questions:
 
 ## 1. Symbolic KV Retrieval
 
-The first benchmark is the symbolic key-value task in `dataset/phase2/kv_retrieve_3`.
+The first benchmark is the symbolic key-value task in [`dataset/phase2/kv_retrieve_3`]({{ site.repository_url }}/tree/main/dataset/phase2/kv_retrieve_3).
 
 Prompt format:
 
@@ -136,7 +136,7 @@ Dataset details:
 
 Analyzed checkpoint:
 
-- `models/kv_retrieve_3/selected_checkpoint.pt`
+- [`models/kv_retrieve_3/selected_checkpoint.pt`]({{ site.repository_url }}/blob/main/models/kv_retrieve_3/selected_checkpoint.pt)
 - `2` layers
 - `2` heads per layer
 - `d_model = 48`
@@ -154,8 +154,8 @@ Selected checkpoint performance:
 
 Canonical analysis:
 
-- `notebook/kv_retrieve_algorithm_analysis.ipynb`
-- `notebook/kv_retrieve_algorithm_discovery.ipynb`
+- [`notebook/kv_retrieve_algorithm_analysis.ipynb`]({{ site.repository_url }}/blob/main/notebook/kv_retrieve_algorithm_analysis.ipynb)
+- [`notebook/kv_retrieve_algorithm_discovery.ipynb`]({{ site.repository_url }}/blob/main/notebook/kv_retrieve_algorithm_discovery.ipynb)
 
 The symbolic benchmark provides the first strong evidence for a retrieval circuit of the form:
 
@@ -351,12 +351,12 @@ Matrix details:
 
 Run manifests:
 
-- `manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_on_d64_l2.json`
-- `manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_on_d64_l2.json`
-- `manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_on_d64_l2.json`
-- `manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_off_d64_l2.json`
-- `manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_off_d64_l2.json`
-- `manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_off_d64_l2.json`
+- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_on_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_on_d64_l2.json)
+- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_on_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_on_d64_l2.json)
+- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_on_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_on_d64_l2.json)
+- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_off_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_off_d64_l2.json)
+- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_off_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_off_d64_l2.json)
+- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_off_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_off_d64_l2.json)
 
 ### Grouped Outcome Table
 
@@ -643,4 +643,25 @@ Then open `http://localhost:8000` and upload `outputs/viewer_payload.json`.
 
 - [Reproducibility notes](reproducibility.md)
 
-This page is the canonical public report for the repository. The repository-root [results.md](../results.md) keeps the fuller repo-facing technical version.
+## Repository Sources For The Reported Experiments
+
+The experiments reported on this page are repository artifacts, not external papers. The exact toy-model datasets, manifests, notebooks, scripts, and curated outputs live in this GitHub repository:
+
+- [Repository root]({{ site.repository_url }})
+- [Full repository report]({{ site.repository_url }}/blob/main/results.md)
+- [Reproducibility commands]({{ site.repository_url }}/blob/main/docs/reproducibility.md)
+- [Phase 2 datasets]({{ site.repository_url }}/tree/main/dataset/phase2)
+- [Phase 2 manifests]({{ site.repository_url }}/tree/main/manifests/phase2)
+- [Public evidence bundle]({{ site.repository_url }}/tree/main/artifacts/phase2)
+- [Static-analysis notebooks]({{ site.repository_url }}/tree/main/notebook)
+
+## References
+
+The prior external work most relevant to the framing and methods used here is:
+
+1. Anthropic, “Toy Models of Superposition,” September 14, 2022. [https://www.anthropic.com/research/toy-models-of-superposition](https://www.anthropic.com/research/toy-models-of-superposition)
+2. Anthropic, “Towards Monosemanticity: Decomposing Language Models With Dictionary Learning,” October 5, 2023. [https://www.anthropic.com/research/towards-monosemanticity-decomposing-language-models-with-dictionary-learning](https://www.anthropic.com/research/towards-monosemanticity-decomposing-language-models-with-dictionary-learning)
+3. Anthropic, “Superposition, Memorization, and Double Descent,” January 5, 2023. [https://www.anthropic.com/news/superposition-memorization-and-double-descent](https://www.anthropic.com/news/superposition-memorization-and-double-descent)
+4. Anthropic, “Tracing the thoughts of a large language model,” March 27, 2025. This release introduces the paper “Circuit tracing: Revealing computational graphs in language models.” [https://www.anthropic.com/research/tracing-thoughts-language-model](https://www.anthropic.com/research/tracing-thoughts-language-model)
+
+This page is the canonical public report for the repository. Prior interpretability papers are cited above; the toy-model experiments described on this page are documented in the linked GitHub repository artifacts.

@@ -1,4 +1,4 @@
-# Mechanistic Transformer Circuits
+# Mechanistic Transparency
 
 This repository studies a simple version of a very large question.
 
@@ -46,6 +46,6 @@ Those questions remain open. This repository does not claim a universal law of c
 
 ## Start Here
 
-- [Public report](docs/index.md)
+- [Public paper page](https://nelson960.github.io/Mechanistic-Transparency/)
 - [Full repository report](results.md)
 - [Reproducibility](docs/reproducibility.md)
