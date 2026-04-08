@@ -9,9 +9,11 @@ permalink: /gpt2-viewer/
 
 This repository also includes a lightweight GPT-2 activation viewer for prompt-level inspection. It is separate from the small-transformer retrieval experiments and is best treated as a compact inspection tool rather than part of the main paper evidence.
 
-  <img src="figures/gpt2_activation_viewer.png" alt="GPT-2 activation viewer interface">
+<figure class="paper-figure">
+  <img src="https://nelson960.github.io/Mechanistic-Transparency/figures/gpt2_activation_viewer.png" alt="GPT-2 activation viewer interface">
   <figcaption><strong>Figure 1.</strong> Prompt-level GPT-2 activation viewer bundled with the repository.</figcaption>
 </figure>
+
 
 ## Build A Viewer Payload
 
