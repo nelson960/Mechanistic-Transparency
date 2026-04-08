@@ -1,0 +1,84 @@
+{
+  "benchmark": {
+    "name": "microlanguage_world_next_token"
+  },
+  "dataset": {
+    "dataset_dir": "/Users/nelson/py/mechanistic_inter/dataset/phase3/microlanguage_world_v10_person_room_direct_iid",
+    "train_split_by_pairs": {
+      "default": "train"
+    },
+    "eval_splits": {
+      "val": "val",
+      "test": "test",
+      "ood": "test_ood_longer_context"
+    },
+    "sweep_base_split": "test",
+    "answer_space_mode": "active_query_target_group",
+    "supervision_mode": "query_target_group_head"
+  },
+  "model": {
+    "d_model": 64,
+    "n_heads": 4,
+    "d_ff": 256,
+    "n_layers": 3,
+    "max_seq_len": 64,
+    "use_role_embeddings": true
+  },
+  "initialization": {
+    "scale": 1.0
+  },
+  "training": {
+    "epochs": 80,
+    "batch_size": 32,
+    "learning_rate": 0.001,
+    "weight_decay": 0.0,
+    "seed": 0,
+    "curriculum": "off",
+    "device": "mps"
+  },
+  "checkpoint_schedule": {
+    "dense_through_epoch": 10,
+    "log_spaced_epoch_count": 12,
+    "save_epoch_zero": true,
+    "save_final": true,
+    "best_metric": "val_accuracy"
+  },
+  "early_stopping": {
+    "enabled": true,
+    "patience": 10,
+    "min_delta": 0.001,
+    "warmup_epochs": 8,
+    "restore_best_state": true
+  },
+  "battery": {
+    "train_probe_limit": 1,
+    "sweep_base_limit": 1,
+    "eval_batch_size": 128,
+    "role_top_k": 1
+  },
+  "sae_tracking": {
+    "enabled": false,
+    "sites": [],
+    "train_limit": 1,
+    "val_limit": 1,
+    "hidden_multiplier": 2,
+    "l1_coeff": 0.001,
+    "learning_rate": 0.01,
+    "batch_size": 4,
+    "epochs": 1,
+    "seed": 0,
+    "top_features_per_site": 1,
+    "superposition_cosine_threshold": 0.2
+  },
+  "training_interventions": [],
+  "summary_thresholds": {
+    "behavior_birth_val_accuracy": 0.9,
+    "operator_birth_score": 0.85,
+    "operator_family_min_score": 0.75,
+    "variable_birth_score": 0.85,
+    "variable_family_min_score": 0.75,
+    "faithfulness_birth_score": 0.85,
+    "faithfulness_family_min_score": 0.75
+  },
+  "output_dir": "/Users/nelson/py/mechanistic_inter/runs/phase3/microlanguage_world_sanity_ladder_v2_roleembed/iid_l3/iid_l3_seed0"
+}

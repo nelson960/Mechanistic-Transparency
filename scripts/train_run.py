@@ -8,6 +8,7 @@ from pathlib import Path
 import torch
 from tqdm.auto import tqdm
 
+from scripts.device_utils import resolve_training_device
 from scripts.kv_benchmark import (
     build_checkpoint_metrics,
     build_kv_model_config,
@@ -61,6 +62,7 @@ def _save_checkpoint(
     epoch: int,
     global_step: int,
     save_reason: str,
+    device_used_for_training: str,
 ) -> None:
     checkpoint_path = run_dir_paths["checkpoints_dir"] / f"{save_reason}_epoch_{epoch:03d}.pt"
     save_run_checkpoint(
@@ -78,7 +80,7 @@ def _save_checkpoint(
         benchmark_name=manifest.benchmark.name,
         run_id=manifest.run_id,
         train_config=manifest.training.__dict__,
-        device_used_for_training=manifest.training.device,
+        device_used_for_training=device_used_for_training,
     )
 
 
@@ -92,7 +94,9 @@ def main() -> None:
     tqdm.write(f"[run] writing artifacts to {run_dir}")
 
     torch.manual_seed(manifest.training.seed)
-    device = torch.device(manifest.training.device)
+    resolved_device = resolve_training_device(manifest.training.device)
+    device = torch.device(resolved_device)
+    tqdm.write(f"[device] manifest={manifest.training.device} resolved={resolved_device}")
     bundle = load_kv_bundle(manifest)
     tqdm.write(
         "[dataset] "
@@ -146,6 +150,7 @@ def main() -> None:
             epoch=0,
             global_step=global_step,
             save_reason="scheduled",
+            device_used_for_training=resolved_device,
         )
     best_metric_value = float(epoch_zero_metrics[best_metric_name])
 
@@ -201,6 +206,7 @@ def main() -> None:
                 epoch=epoch,
                 global_step=global_step,
                 save_reason="scheduled",
+                device_used_for_training=resolved_device,
             )
 
         metric_value = float(checkpoint_metrics[best_metric_name])
@@ -216,6 +222,7 @@ def main() -> None:
                 epoch=epoch,
                 global_step=global_step,
                 save_reason="best_val",
+                device_used_for_training=resolved_device,
             )
     epoch_bar.close()
 
@@ -245,6 +252,7 @@ def main() -> None:
             epoch=manifest.training.epochs,
             global_step=global_step,
             save_reason="final",
+            device_used_for_training=resolved_device,
         )
     tqdm.write(f"[done] checkpoints written under {run_dir_paths['checkpoints_dir']}")
 

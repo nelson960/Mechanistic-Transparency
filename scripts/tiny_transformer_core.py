@@ -46,13 +46,14 @@ def apply_rope(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.T
 
 
 class MultiHeadSelfAttention(nn.Module):
-    def __init__(self, d_model: int, n_heads: int, max_seq_len: int) -> None:
+    def __init__(self, d_model: int, n_heads: int, max_seq_len: int, *, causal: bool = True) -> None:
         super().__init__()
         if d_model % n_heads != 0:
             raise ValueError(f"d_model={d_model} must be divisible by n_heads={n_heads}")
         self.d_model = d_model
         self.n_heads = n_heads
         self.head_dim = d_model // n_heads
+        self.causal = causal
         self.q_proj = nn.Linear(d_model, d_model, bias=False)
         self.k_proj = nn.Linear(d_model, d_model, bias=False)
         self.v_proj = nn.Linear(d_model, d_model, bias=False)
@@ -81,11 +82,12 @@ class MultiHeadSelfAttention(nn.Module):
         k = apply_rope(k, cos, sin)
 
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
-        causal_mask = torch.triu(
-            torch.ones(seq_len, seq_len, device=x.device, dtype=torch.bool),
-            diagonal=1,
-        )
-        scores = scores.masked_fill(causal_mask, torch.finfo(scores.dtype).min)
+        if self.causal:
+            causal_mask = torch.triu(
+                torch.ones(seq_len, seq_len, device=x.device, dtype=torch.bool),
+                diagonal=1,
+            )
+            scores = scores.masked_fill(causal_mask, torch.finfo(scores.dtype).min)
         pattern = scores.softmax(dim=-1)
         head_out = torch.matmul(pattern, v)
         merged = self.merge_heads(head_out)
@@ -131,10 +133,10 @@ class SwiGLU(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model: int, n_heads: int, d_ff: int, max_seq_len: int) -> None:
+    def __init__(self, d_model: int, n_heads: int, d_ff: int, max_seq_len: int, *, causal: bool = True) -> None:
         super().__init__()
         self.norm1 = RMSNorm(d_model)
-        self.attn = MultiHeadSelfAttention(d_model, n_heads, max_seq_len)
+        self.attn = MultiHeadSelfAttention(d_model, n_heads, max_seq_len, causal=causal)
         self.norm2 = RMSNorm(d_model)
         self.mlp = SwiGLU(d_model, d_ff)
 
@@ -166,6 +168,8 @@ class TransformerBlock(nn.Module):
 
 
 class TinyDecoderTransformer(nn.Module):
+    model_name = "tiny_decoder_transformer"
+
     def __init__(
         self,
         vocab_size: int,
@@ -174,21 +178,38 @@ class TinyDecoderTransformer(nn.Module):
         d_ff: int,
         n_layers: int,
         max_seq_len: int,
+        num_role_ids: int = 0,
+        causal: bool = True,
     ) -> None:
         super().__init__()
+        self.causal = causal
         self.token_embed = nn.Embedding(vocab_size, d_model)
+        self.role_embed = nn.Embedding(num_role_ids, d_model) if num_role_ids > 0 else None
         self.blocks = nn.ModuleList(
-            [TransformerBlock(d_model, n_heads, d_ff, max_seq_len) for _ in range(n_layers)]
+            [TransformerBlock(d_model, n_heads, d_ff, max_seq_len, causal=causal) for _ in range(n_layers)]
         )
         self.norm_final = RMSNorm(d_model)
 
-    def forward(self, input_ids: torch.Tensor, return_cache: bool = False) -> tuple[torch.Tensor, dict] | torch.Tensor:
+    def forward_hidden(
+        self,
+        input_ids: torch.Tensor,
+        *,
+        role_ids: torch.Tensor | None = None,
+        return_cache: bool = False,
+    ) -> tuple[torch.Tensor, dict] | torch.Tensor:
         x = self.token_embed(input_ids)
+        if self.role_embed is not None:
+            if role_ids is None:
+                raise ValueError("TinyDecoderTransformer with role embeddings requires role_ids")
+            if role_ids.shape != input_ids.shape:
+                raise ValueError(
+                    f"role_ids shape {tuple(role_ids.shape)} must match input_ids shape {tuple(input_ids.shape)}"
+                )
+            x = x + self.role_embed(role_ids)
         if not return_cache:
             for block in self.blocks:
                 x, _ = block(x, capture=False)
-            x = self.norm_final(x)
-            return x @ self.token_embed.weight.T
+            return self.norm_final(x)
 
         cache = {
             "token_embed": x.detach().cpu(),
@@ -198,9 +219,152 @@ class TinyDecoderTransformer(nn.Module):
             x, block_cache = block(x, capture=True)
             cache["blocks"].append(block_cache)
         final_hidden = self.norm_final(x)
-        logits = final_hidden @ self.token_embed.weight.T
         cache["final_hidden"] = final_hidden.detach().cpu()
+        return final_hidden, cache
+
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        *,
+        role_ids: torch.Tensor | None = None,
+        return_cache: bool = False,
+    ) -> tuple[torch.Tensor, dict] | torch.Tensor:
+        if not return_cache:
+            final_hidden = self.forward_hidden(input_ids, role_ids=role_ids, return_cache=False)
+            return final_hidden @ self.token_embed.weight.T
+
+        final_hidden, cache = self.forward_hidden(input_ids, role_ids=role_ids, return_cache=True)
+        logits = final_hidden @ self.token_embed.weight.T
         cache["logits"] = logits.detach().cpu()
+        return logits, cache
+
+
+class TinyGroupDecoderTransformer(TinyDecoderTransformer):
+    model_name = "tiny_group_decoder_transformer"
+
+    def __init__(
+        self,
+        vocab_size: int,
+        d_model: int,
+        n_heads: int,
+        d_ff: int,
+        n_layers: int,
+        max_seq_len: int,
+        group_head_output_sizes: dict[str, int],
+        num_role_ids: int = 0,
+    ) -> None:
+        super().__init__(
+            vocab_size=vocab_size,
+            d_model=d_model,
+            n_heads=n_heads,
+            d_ff=d_ff,
+            n_layers=n_layers,
+            max_seq_len=max_seq_len,
+            num_role_ids=num_role_ids,
+        )
+        if not group_head_output_sizes:
+            raise ValueError("TinyGroupDecoderTransformer requires at least one output head")
+        self.group_heads = nn.ModuleDict(
+            {
+                group_name: nn.Linear(d_model, int(output_size), bias=False)
+                for group_name, output_size in sorted(group_head_output_sizes.items())
+            }
+        )
+
+    def forward_group_logits(
+        self,
+        input_ids: torch.Tensor,
+        *,
+        group_name: str,
+        role_ids: torch.Tensor | None = None,
+        return_cache: bool = False,
+    ) -> tuple[torch.Tensor, dict] | torch.Tensor:
+        if group_name not in self.group_heads:
+            raise ValueError(f"Unknown group head {group_name!r}")
+        if not return_cache:
+            final_hidden = self.forward_hidden(input_ids, role_ids=role_ids, return_cache=False)
+            return self.group_heads[group_name](final_hidden)
+        final_hidden, cache = self.forward_hidden(input_ids, role_ids=role_ids, return_cache=True)
+        logits = self.group_heads[group_name](final_hidden)
+        cache["group_name"] = group_name
+        cache["group_logits"] = logits.detach().cpu()
+        return logits, cache
+
+
+class TinyQueryGroupEncoderTransformer(TinyDecoderTransformer):
+    model_name = "tiny_query_group_encoder_transformer"
+
+    def __init__(
+        self,
+        vocab_size: int,
+        d_model: int,
+        n_heads: int,
+        d_ff: int,
+        n_layers: int,
+        max_seq_len: int,
+        group_head_output_sizes: dict[str, int],
+        classifier_role_id: int,
+        num_role_ids: int = 0,
+    ) -> None:
+        super().__init__(
+            vocab_size=vocab_size,
+            d_model=d_model,
+            n_heads=n_heads,
+            d_ff=d_ff,
+            n_layers=n_layers,
+            max_seq_len=max_seq_len,
+            num_role_ids=num_role_ids,
+            causal=False,
+        )
+        if not group_head_output_sizes:
+            raise ValueError("TinyQueryGroupEncoderTransformer requires at least one output head")
+        if classifier_role_id < 0:
+            raise ValueError(f"classifier_role_id must be non-negative, got {classifier_role_id}")
+        self.classifier_role_id = int(classifier_role_id)
+        self.group_heads = nn.ModuleDict(
+            {
+                group_name: nn.Linear(d_model, int(output_size), bias=False)
+                for group_name, output_size in sorted(group_head_output_sizes.items())
+            }
+        )
+
+    def _select_classifier_hidden(self, final_hidden: torch.Tensor, role_ids: torch.Tensor | None) -> torch.Tensor:
+        if role_ids is None:
+            raise ValueError("TinyQueryGroupEncoderTransformer requires role_ids")
+        if role_ids.shape != final_hidden.shape[:2]:
+            raise ValueError(
+                f"role_ids shape {tuple(role_ids.shape)} must match hidden shape {tuple(final_hidden.shape[:2])}"
+            )
+        selector = role_ids == self.classifier_role_id
+        selected_counts = selector.sum(dim=1)
+        if not torch.all(selected_counts == 1):
+            raise ValueError(
+                "TinyQueryGroupEncoderTransformer requires exactly one classifier role position per row, "
+                f"got counts {selected_counts.tolist()}"
+            )
+        batch_size, _, d_model = final_hidden.shape
+        return final_hidden.masked_select(selector.unsqueeze(-1)).view(batch_size, d_model)
+
+    def forward_group_logits(
+        self,
+        input_ids: torch.Tensor,
+        *,
+        group_name: str,
+        role_ids: torch.Tensor | None = None,
+        return_cache: bool = False,
+    ) -> tuple[torch.Tensor, dict] | torch.Tensor:
+        if group_name not in self.group_heads:
+            raise ValueError(f"Unknown group head {group_name!r}")
+        if not return_cache:
+            final_hidden = self.forward_hidden(input_ids, role_ids=role_ids, return_cache=False)
+            classifier_hidden = self._select_classifier_hidden(final_hidden, role_ids)
+            return self.group_heads[group_name](classifier_hidden)
+        final_hidden, cache = self.forward_hidden(input_ids, role_ids=role_ids, return_cache=True)
+        classifier_hidden = self._select_classifier_hidden(final_hidden, role_ids)
+        logits = self.group_heads[group_name](classifier_hidden)
+        cache["group_name"] = group_name
+        cache["classifier_hidden"] = classifier_hidden.detach().cpu()
+        cache["group_logits"] = logits.detach().cpu()
         return logits, cache
 
 
@@ -208,11 +372,31 @@ def load_tiny_decoder_checkpoint(
     checkpoint_path: Path,
     device: torch.device,
 ) -> tuple[dict, TinyDecoderTransformer]:
+    checkpoint, model = load_decoder_checkpoint(checkpoint_path, device)
+    if not isinstance(model, TinyDecoderTransformer):
+        raise ValueError(
+            f"Checkpoint {checkpoint_path} did not contain a TinyDecoderTransformer-compatible model"
+        )
+    return checkpoint, model
+
+
+def load_decoder_checkpoint(
+    checkpoint_path: Path,
+    device: torch.device,
+) -> tuple[dict, nn.Module]:
     if not checkpoint_path.exists():
         raise FileNotFoundError(f"Missing checkpoint: {checkpoint_path}")
 
     checkpoint = torch.load(checkpoint_path, map_location=device)
-    model = TinyDecoderTransformer(**checkpoint["config"]).to(device)
+    model_name = str(checkpoint.get("model_name", TinyDecoderTransformer.model_name))
+    if model_name == TinyDecoderTransformer.model_name:
+        model = TinyDecoderTransformer(**checkpoint["config"]).to(device)
+    elif model_name == TinyGroupDecoderTransformer.model_name:
+        model = TinyGroupDecoderTransformer(**checkpoint["config"]).to(device)
+    elif model_name == TinyQueryGroupEncoderTransformer.model_name:
+        model = TinyQueryGroupEncoderTransformer(**checkpoint["config"]).to(device)
+    else:
+        raise ValueError(f"Unsupported checkpoint model_name {model_name!r}")
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()
     return checkpoint, model

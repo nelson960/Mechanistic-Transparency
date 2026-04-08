@@ -119,6 +119,10 @@ def select_query_key(
         return str(pairs[target_slot][0])
     if query_slot_policy == "random":
         return rng.choice([key for key, _ in pairs])
+    if query_slot_policy == "fixed_first":
+        return str(pairs[0][0])
+    if query_slot_policy == "fixed_last":
+        return str(pairs[-1][0])
     raise ValueError(f"Unsupported query_slot_policy {query_slot_policy!r}")
 
 
@@ -263,7 +267,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--query-slot-policy",
-        choices=["balanced", "random"],
+        choices=["balanced", "random", "fixed_first", "fixed_last"],
         default="balanced",
         help="How to choose the queried slot within each prompt.",
     )

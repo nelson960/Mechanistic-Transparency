@@ -1,3 +1,7 @@
 torch
 transformers
 transformer-lens
+pandas
+matplotlib
+numpy
+tqdm

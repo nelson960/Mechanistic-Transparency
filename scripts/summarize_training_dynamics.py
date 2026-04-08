@@ -52,6 +52,7 @@ def _manifest_signature(manifest) -> str:
             "benchmark": manifest.benchmark.__dict__,
             "dataset": manifest.dataset.__dict__,
             "model": manifest.model.__dict__,
+            "initialization": manifest.initialization.__dict__,
             "training": training_fields,
             "checkpoint_schedule": manifest.checkpoint_schedule.__dict__,
             "battery": manifest.battery.__dict__,

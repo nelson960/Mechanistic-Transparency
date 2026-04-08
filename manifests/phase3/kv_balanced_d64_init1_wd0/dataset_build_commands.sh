@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+/opt/miniconda3/envs/ml/bin/python -m scripts.generate_kv_retrieval_dataset --outdir /Users/nelson/py/mechanistic_inter/dataset/phase3/kv_balanced_d64_init1_wd0/query_slot_balanced --dataset-name kv_symbolic_factor_screen_v1_balanced --train-size 30000 --val-size 3000 --test-size 3000 --ood-size 3000 --num-keys 16 --num-values 16 --context-pairs 2 --train-context-pairs 2 --ood-context-pairs 3 --query-slot-policy balanced --seed 17

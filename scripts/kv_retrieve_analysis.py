@@ -610,6 +610,8 @@ def ov_source_logits(
     layer_index: int,
     head_index: int,
     source_position: int,
+    *,
+    batch_index: int = 0,
 ) -> torch.Tensor:
     block = model.blocks[layer_index]
     attn = block.attn
@@ -617,7 +619,7 @@ def ov_source_logits(
     head_start = head_index * head_dim
     head_stop = head_start + head_dim
 
-    source_state = cache["blocks"][layer_index]["attn_in"][0, source_position].to(
+    source_state = cache["blocks"][layer_index]["attn_in"][batch_index, source_position].to(
         device=attn.v_proj.weight.device,
         dtype=attn.v_proj.weight.dtype,
     )

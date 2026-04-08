@@ -111,8 +111,21 @@ def build_kv_model_config(manifest: RunManifest, bundle: Any) -> dict[str, Any]:
     }
 
 
+def _apply_initialization_scale(model: TinyDecoderTransformer, scale: float) -> None:
+    if scale <= 0.0:
+        raise ValueError(f"Initialization scale must be positive, got {scale}")
+    if scale == 1.0:
+        return
+    with torch.no_grad():
+        for parameter in model.parameters():
+            if parameter.ndim > 1:
+                parameter.mul_(scale)
+
+
 def instantiate_kv_model(manifest: RunManifest, bundle: Any, device: torch.device) -> TinyDecoderTransformer:
-    return TinyDecoderTransformer(**build_kv_model_config(manifest, bundle)).to(device)
+    model = TinyDecoderTransformer(**build_kv_model_config(manifest, bundle)).to(device)
+    _apply_initialization_scale(model, manifest.initialization.scale)
+    return model
 
 
 def _shuffle_rows(rows: list[dict[str, Any]], seed: int) -> list[dict[str, Any]]:

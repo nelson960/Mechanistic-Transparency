@@ -1,4 +1,4 @@
-title: Mechanistic Transformer Circuits
+title: Mechanistic Transparency
 description: Empirical evidence for staged retrieval motif formation in small transformers trained on controlled in-context retrieval tasks.
 url: https://nelson960.github.io
 baseurl: /Mechanistic-Transparency
@@ -8,5 +8,3 @@ markdown: kramdown
 lang: en
 plugins:
   - jekyll-seo-tag
-header_pages:
-  - reproducibility.md

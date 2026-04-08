@@ -2,9 +2,9 @@
 
 This repository studies a simple version of a very large question.
 
-Transformers are defined by fixed equations and trained by gradient descent, yet after training they behave as if they contain reusable internal operators, circuits, and feature geometry. Those learned internal structures are part of what we experience as model capability or "intelligence." The goal here is to study that process in settings small enough to inspect directly.
+Transformers are defined by fixed equations and trained by gradient descent, yet after training they behave as if they contain reusable internal operators, circuits, and feature geometry. Those learned internal structures are part of what appears as model capability or "intelligence." The goal here is to study that process in settings small enough to inspect directly.
 
-The repository uses tiny transformers and controlled retrieval tasks because they make one part of the problem tractable: if a model learns a real mechanism, we can often recover it, track it across training, and separate genuine circuit formation from memorization.
+The repository uses tiny transformers and controlled retrieval tasks because they make one part of the problem tractable: if a model learns a real mechanism, it can often be recovered, tracked across training, and separated from memorization.
 
 ## Current Findings
 
@@ -40,12 +40,13 @@ The broader agenda behind the repository is larger than any one benchmark:
 - Where does useful computation or "intelligence" actually occur inside a trained network?
 - How do learned operators become reusable circuits and feature geometry?
 - Why do some motifs appear reliably under gradient descent while others do not?
-- If we understand those mechanisms well enough, can we influence outputs in a principled way?
+- If I understand those mechanisms well enough, can I influence outputs in a principled way?
 
 Those questions remain open. This repository does not claim a universal law of circuit formation or a complete theory of intelligence. What it does provide is a controlled experimental path into those questions.
 
 ## Start Here
 
 - [Public paper page](https://nelson960.github.io/Mechanistic-Transparency/)
+- [GPT-2 activation viewer](https://nelson960.github.io/Mechanistic-Transparency/gpt2-viewer/)
 - [Full repository report](results.md)
 - [Reproducibility](docs/reproducibility.md)

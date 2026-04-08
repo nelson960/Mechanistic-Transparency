@@ -25,6 +25,8 @@ class DatasetConfig:
     train_split_by_pairs: dict[str, str]
     eval_splits: dict[str, str]
     sweep_base_split: str
+    answer_space_mode: str = "none"
+    supervision_mode: str = "next_token_vocab"
 
 
 @dataclass(frozen=True)
@@ -34,6 +36,12 @@ class ModelConfig:
     d_ff: int
     n_layers: int
     max_seq_len: int
+    use_role_embeddings: bool = False
+
+
+@dataclass(frozen=True)
+class InitializationConfig:
+    scale: float
 
 
 @dataclass(frozen=True)
@@ -54,6 +62,15 @@ class CheckpointScheduleConfig:
     save_epoch_zero: bool
     save_final: bool
     best_metric: str
+
+
+@dataclass(frozen=True)
+class EarlyStoppingConfig:
+    enabled: bool
+    patience: int
+    min_delta: float
+    warmup_epochs: int
+    restore_best_state: bool
 
 
 @dataclass(frozen=True)
@@ -138,8 +155,10 @@ class RunManifest:
     benchmark: BenchmarkConfig
     dataset: DatasetConfig
     model: ModelConfig
+    initialization: InitializationConfig
     training: TrainingConfig
     checkpoint_schedule: CheckpointScheduleConfig
+    early_stopping: EarlyStoppingConfig
     battery: BatteryConfig
     sae_tracking: SAETrackingConfig
     formation: FormationConfig
@@ -267,12 +286,24 @@ def _build_disabled_formation_config() -> FormationConfig:
     )
 
 
+def _build_disabled_early_stopping_config() -> EarlyStoppingConfig:
+    return EarlyStoppingConfig(
+        enabled=False,
+        patience=1,
+        min_delta=0.0,
+        warmup_epochs=0,
+        restore_best_state=True,
+    )
+
+
 def build_run_manifest(payload: dict[str, Any]) -> RunManifest:
     benchmark_payload = _expect_mapping(payload, "benchmark")
     dataset_payload = _expect_mapping(payload, "dataset")
     model_payload = _expect_mapping(payload, "model")
+    initialization_payload = payload.get("initialization")
     training_payload = _expect_mapping(payload, "training")
     schedule_payload = _expect_mapping(payload, "checkpoint_schedule")
+    early_stopping_payload = payload.get("early_stopping")
     battery_payload = _expect_mapping(payload, "battery")
     sae_payload = _expect_mapping(payload, "sae_tracking")
     formation_payload = payload.get("formation")
@@ -286,6 +317,16 @@ def build_run_manifest(payload: dict[str, Any]) -> RunManifest:
         train_split_by_pairs=_expect_string_mapping(dataset_payload, "train_split_by_pairs"),
         eval_splits=_expect_string_mapping(dataset_payload, "eval_splits"),
         sweep_base_split=_expect_string(dataset_payload, "sweep_base_split"),
+        answer_space_mode=(
+            _expect_string(dataset_payload, "answer_space_mode")
+            if "answer_space_mode" in dataset_payload
+            else "none"
+        ),
+        supervision_mode=(
+            _expect_string(dataset_payload, "supervision_mode")
+            if "supervision_mode" in dataset_payload
+            else "next_token_vocab"
+        ),
     )
     model = ModelConfig(
         d_model=_expect_positive_int(model_payload, "d_model"),
@@ -293,7 +334,20 @@ def build_run_manifest(payload: dict[str, Any]) -> RunManifest:
         d_ff=_expect_positive_int(model_payload, "d_ff"),
         n_layers=_expect_positive_int(model_payload, "n_layers"),
         max_seq_len=_expect_positive_int(model_payload, "max_seq_len"),
+        use_role_embeddings=(
+            _expect_bool(model_payload, "use_role_embeddings")
+            if "use_role_embeddings" in model_payload
+            else False
+        ),
     )
+    if initialization_payload is None:
+        initialization = InitializationConfig(scale=1.0)
+    else:
+        if not isinstance(initialization_payload, dict):
+            raise ValueError("Manifest field 'initialization' must be an object when provided")
+        initialization = InitializationConfig(
+            scale=_expect_float(initialization_payload, "scale"),
+        )
     training = TrainingConfig(
         epochs=_expect_positive_int(training_payload, "epochs"),
         batch_size=_expect_positive_int(training_payload, "batch_size"),
@@ -310,6 +364,18 @@ def build_run_manifest(payload: dict[str, Any]) -> RunManifest:
         save_final=_expect_bool(schedule_payload, "save_final"),
         best_metric=_expect_string(schedule_payload, "best_metric"),
     )
+    if early_stopping_payload is None:
+        early_stopping = _build_disabled_early_stopping_config()
+    else:
+        if not isinstance(early_stopping_payload, dict):
+            raise ValueError("Manifest field 'early_stopping' must be an object when provided")
+        early_stopping = EarlyStoppingConfig(
+            enabled=_expect_bool(early_stopping_payload, "enabled"),
+            patience=_expect_positive_int(early_stopping_payload, "patience"),
+            min_delta=_expect_float(early_stopping_payload, "min_delta"),
+            warmup_epochs=_expect_non_negative_int(early_stopping_payload, "warmup_epochs"),
+            restore_best_state=_expect_bool(early_stopping_payload, "restore_best_state"),
+        )
     battery = BatteryConfig(
         train_probe_limit=_expect_positive_int(battery_payload, "train_probe_limit"),
         sweep_base_limit=_expect_positive_int(battery_payload, "sweep_base_limit"),
@@ -388,20 +454,52 @@ def build_run_manifest(payload: dict[str, Any]) -> RunManifest:
         faithfulness_family_min_score=_expect_float(thresholds_payload, "faithfulness_family_min_score"),
     )
 
-    if benchmark.name != "kv_retrieval":
-        raise ValueError(f"Unsupported benchmark {benchmark.name!r}; only 'kv_retrieval' is implemented")
+    if benchmark.name not in {"kv_retrieval", "microlanguage_world_next_token"}:
+        raise ValueError(
+            f"Unsupported benchmark {benchmark.name!r}; expected 'kv_retrieval' or 'microlanguage_world_next_token'"
+        )
     if training.curriculum not in {"on", "off"}:
         raise ValueError("Manifest training.curriculum must be 'on' or 'off'")
     if model.d_model % model.n_heads != 0:
         raise ValueError("Manifest model.d_model must be divisible by model.n_heads")
+    if initialization.scale <= 0.0:
+        raise ValueError("Manifest initialization.scale must be positive")
     if checkpoint_schedule.dense_through_epoch > training.epochs:
         raise ValueError("Manifest checkpoint_schedule.dense_through_epoch exceeds training.epochs")
+    if early_stopping.min_delta < 0.0:
+        raise ValueError("Manifest early_stopping.min_delta must be non-negative")
+    if early_stopping.warmup_epochs > training.epochs:
+        raise ValueError("Manifest early_stopping.warmup_epochs exceeds training.epochs")
     if dataset.sweep_base_split not in dataset.eval_splits.values():
         raise ValueError(
             "Manifest dataset.sweep_base_split must match one of the dataset.eval_splits values"
         )
-    if "2" not in dataset.train_split_by_pairs or "3" not in dataset.train_split_by_pairs:
-        raise ValueError("Manifest dataset.train_split_by_pairs must define both '2' and '3' training splits")
+    if dataset.answer_space_mode not in {"none", "query_target_group", "active_query_target_group"}:
+        raise ValueError(
+            "Manifest dataset.answer_space_mode must be 'none', 'query_target_group', or 'active_query_target_group'"
+        )
+    if dataset.supervision_mode not in {
+        "next_token_vocab",
+        "dense_value_answer_vocab",
+        "query_target_group_head",
+        "query_target_group_encoder_head",
+    }:
+        raise ValueError(
+            "Manifest dataset.supervision_mode must be 'next_token_vocab', "
+            "'dense_value_answer_vocab', 'query_target_group_head', or 'query_target_group_encoder_head'"
+        )
+    if benchmark.name == "kv_retrieval":
+        if "2" not in dataset.train_split_by_pairs or "3" not in dataset.train_split_by_pairs:
+            raise ValueError("Manifest dataset.train_split_by_pairs must define both '2' and '3' training splits")
+    if benchmark.name == "microlanguage_world_next_token":
+        if training.curriculum != "off":
+            raise ValueError("Microlanguage benchmark currently requires training.curriculum='off'")
+        if set(dataset.train_split_by_pairs) != {"default"}:
+            raise ValueError(
+                "Microlanguage benchmark requires dataset.train_split_by_pairs to define exactly {'default': <split>}"
+            )
+        if formation.enabled:
+            raise ValueError("Microlanguage benchmark does not support formation tracking yet")
     if sae_tracking.enabled and not sae_tracking.sites:
         raise ValueError("Manifest sae_tracking.sites must be non-empty when sae_tracking.enabled is true")
     if sae_tracking.superposition_cosine_threshold < 0.0 or sae_tracking.superposition_cosine_threshold > 1.0:
@@ -478,8 +576,10 @@ def build_run_manifest(payload: dict[str, Any]) -> RunManifest:
         benchmark=benchmark,
         dataset=dataset,
         model=model,
+        initialization=initialization,
         training=training,
         checkpoint_schedule=checkpoint_schedule,
+        early_stopping=early_stopping,
         battery=battery,
         sae_tracking=sae_tracking,
         formation=formation,
@@ -657,6 +757,25 @@ def iter_tracked_parameter_groups(model: torch.nn.Module):
         "layer_index": None,
         "component": "token_embed",
     }
+    role_embed = getattr(model, "role_embed", None)
+    if isinstance(role_embed, torch.nn.Embedding):
+        yield {
+            "name": "role_embed.weight",
+            "tensor": role_embed.weight,
+            "grad_source": role_embed.weight,
+            "layer_index": None,
+            "component": "role_embed",
+        }
+    group_heads = getattr(model, "group_heads", None)
+    if isinstance(group_heads, torch.nn.ModuleDict):
+        for group_name, head in group_heads.items():
+            yield {
+                "name": f"group_head.{group_name}.weight",
+                "tensor": head.weight,
+                "grad_source": head.weight,
+                "layer_index": None,
+                "component": f"group_head:{group_name}",
+            }
     for layer_index, block in enumerate(model.blocks):
         yield {
             "name": f"block{layer_index + 1}.norm1.weight",
@@ -907,6 +1026,99 @@ def _encode_batch(rows: list[dict[str, Any]], token_to_id: dict[str, int], devic
     )
 
 
+def _build_answer_space_mask(
+    *,
+    rows: list[dict[str, Any]],
+    token_to_id: dict[str, int],
+    dataset_metadata: dict[str, Any] | None,
+    answer_space_mode: str,
+    device: torch.device,
+) -> torch.Tensor | None:
+    if answer_space_mode == "none":
+        return None
+    if answer_space_mode not in {"query_target_group", "active_query_target_group"}:
+        raise ValueError(f"Unsupported answer_space_mode {answer_space_mode!r}")
+    if dataset_metadata is None:
+        raise ValueError("Answer-space masking requires dataset metadata")
+
+    latent_state = dataset_metadata.get("latent_state")
+    vocabulary_groups = dataset_metadata.get("vocabulary_groups")
+    if not isinstance(latent_state, dict) or not isinstance(vocabulary_groups, dict):
+        raise ValueError("Dataset metadata must define latent_state and vocabulary_groups for answer-space masking")
+    query_family_specs = latent_state.get("query_families")
+    if not isinstance(query_family_specs, dict):
+        raise ValueError("Dataset metadata latent_state.query_families must be an object for answer-space masking")
+
+    mask = torch.zeros((len(rows), len(token_to_id)), dtype=torch.bool, device=device)
+    for row_index, row in enumerate(rows):
+        query_family = row.get("query_family")
+        target_token = row.get("target")
+        if not isinstance(query_family, str) or not query_family.strip():
+            raise ValueError(f"Row must contain a non-empty query_family for answer-space masking, got {row!r}")
+        if not isinstance(target_token, str) or target_token not in token_to_id:
+            raise ValueError(f"Row must contain a valid target token for answer-space masking, got {row!r}")
+        family_spec = query_family_specs.get(query_family)
+        if not isinstance(family_spec, dict):
+            raise ValueError(f"Dataset metadata is missing query-family spec for {query_family!r}")
+        target_group = family_spec.get("target_group")
+        if not isinstance(target_group, str) or not target_group.strip():
+            raise ValueError(f"Query family {query_family!r} must define a non-empty target_group")
+        group_tokens = vocabulary_groups.get(target_group)
+        if not isinstance(group_tokens, list) or not group_tokens:
+            raise ValueError(f"Vocabulary group {target_group!r} is missing or empty")
+        unknown_tokens = [token for token in group_tokens if token not in token_to_id]
+        if unknown_tokens:
+            raise ValueError(
+                f"Vocabulary group {target_group!r} contains tokens not present in token_to_id: {unknown_tokens}"
+            )
+        if answer_space_mode == "query_target_group":
+            token_ids = [token_to_id[token] for token in group_tokens]
+        else:
+            prompt = row.get("prompt")
+            if not isinstance(prompt, str) or not prompt.strip():
+                raise ValueError(f"Row must contain a non-empty prompt for active answer-space masking, got {row!r}")
+            group_token_set = set(group_tokens)
+            active_group_tokens = [token for token in prompt.split() if token in group_token_set]
+            if not active_group_tokens:
+                raise ValueError(
+                    f"Prompt does not contain any active tokens from target group {target_group!r}: {prompt!r}"
+                )
+            token_ids = sorted({token_to_id[token] for token in active_group_tokens})
+        mask[row_index, token_ids] = True
+        if not mask[row_index, token_to_id[target_token]]:
+            raise ValueError(
+                f"Target token {target_token!r} is not in the allowed answer space for query_family={query_family!r}"
+            )
+    return mask
+
+
+def _apply_answer_space_mask(
+    logits: torch.Tensor,
+    *,
+    rows: list[dict[str, Any]],
+    token_to_id: dict[str, int],
+    dataset_metadata: dict[str, Any] | None,
+    answer_space_mode: str,
+) -> torch.Tensor:
+    mask = _build_answer_space_mask(
+        rows=rows,
+        token_to_id=token_to_id,
+        dataset_metadata=dataset_metadata,
+        answer_space_mode=answer_space_mode,
+        device=logits.device,
+    )
+    if mask is None:
+        return logits
+    if logits.shape != mask.shape:
+        raise ValueError(
+            f"Answer-space mask shape {tuple(mask.shape)} does not match logits shape {tuple(logits.shape)}"
+        )
+    masked_logits = logits.masked_fill(~mask, torch.finfo(logits.dtype).min)
+    if not torch.isfinite(masked_logits.max(dim=-1).values).all():
+        raise ValueError("Answer-space masking removed every valid logit for at least one row")
+    return masked_logits
+
+
 def evaluate_next_token_rows(
     model: torch.nn.Module,
     rows: list[dict[str, Any]],
@@ -915,6 +1127,8 @@ def evaluate_next_token_rows(
     id_to_token: dict[int, str],
     device: torch.device,
     batch_size: int,
+    dataset_metadata: dict[str, Any] | None = None,
+    answer_space_mode: str = "none",
 ) -> dict[str, Any]:
     if not rows:
         raise ValueError("Expected at least one row when evaluating next-token rows")
@@ -934,7 +1148,13 @@ def evaluate_next_token_rows(
                 batch_rows = split_rows[start:start + batch_size]
                 input_ids, target_ids = _encode_batch(batch_rows, token_to_id, device)
                 logits = model(input_ids)
-                final_logits = logits[:, -1, :]
+                final_logits = _apply_answer_space_mask(
+                    logits[:, -1, :],
+                    rows=batch_rows,
+                    token_to_id=token_to_id,
+                    dataset_metadata=dataset_metadata,
+                    answer_space_mode=answer_space_mode,
+                )
                 losses = F.cross_entropy(final_logits, target_ids, reduction="none")
                 predicted_ids = final_logits.argmax(dim=-1)
                 target_logits = final_logits.gather(1, target_ids.unsqueeze(1)).squeeze(1)
@@ -999,6 +1219,7 @@ def train_next_token_epoch(
     batch_size: int,
     epoch: int,
     history_path: Path,
+    dataset_metadata: dict[str, Any] | None = None,
     formation_context: Any | None = None,
     bundle: Any | None = None,
     global_step_start: int,
@@ -1023,7 +1244,13 @@ def train_next_token_epoch(
             logits = forward_tiny_decoder_with_interventions(model, input_ids, active_interventions)
         else:
             logits = model(input_ids)
-        final_logits = logits[:, -1, :]
+        final_logits = _apply_answer_space_mask(
+            logits[:, -1, :],
+            rows=batch_rows,
+            token_to_id=token_to_id,
+            dataset_metadata=dataset_metadata,
+            answer_space_mode=manifest.dataset.answer_space_mode,
+        )
         loss = F.cross_entropy(final_logits, target_ids)
         loss.backward()
         pre_step_snapshot = snapshot_tracked_parameter_groups(model)

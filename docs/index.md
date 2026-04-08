@@ -5,25 +5,33 @@ description: Empirical evidence for staged retrieval motif formation in small tr
 permalink: /
 ---
 
-# Mechanistic Transformer Circuits
+# Retrieval Motif Emergence in Small Transformers
+
+<p class="paper-byline">Nelson Alex<br>6/4/2026</p>
 
 <p class="lead">Controlled in-context retrieval benchmarks, checkpoint-by-checkpoint mechanistic measurements, and a full 150-epoch six-run matrix for studying circuit emergence in small transformers.</p>
 
+<div class="paper-nav">
+  <strong>On this page.</strong>
+  <a href="#abstract">Abstract</a>
+  <a href="#main-result">Main Result</a>
+  <a href="#setup">Setup</a>
+  <a href="#full-matrix">Six-Run Matrix</a>
+  <a href="#formation">How The Circuit Forms</a>
+  <a href="#limits">Limits</a>
+  <a href="#related-work">Related Work</a>
+</div>
+
+<a id="abstract"></a>
 ## Abstract
 
-This project asks a simple question in a setting small enough to inspect directly:
+Small transformers in these controlled retrieval tasks do not converge to one fixed circuit or one universal birth trajectory. Across seeds and curricula they repeatedly converge to a **stable retrieval motif** while taking **variable formation paths**.
 
-**can a small transformer learn a human-readable in-context retrieval mechanism, and can that mechanism be tracked as it emerges during training?**
+The most stable object is a downstream layer-2 retrieval or write role. Around it sits an additional support computation, strong query-key and selected-value structure, and a matching step that is real but harder to cleanly localize. What varies is the route by which that motif appears: behavior, copy, routing, probe variables, and faithfulness scores do not cross threshold in one fixed order, and exact head identity is not stable across all runs.
 
-The answer supported by the experiments here is yes, with an important qualification. The learned mechanism is not best described as one universal fixed head graph. It is better described as a **stable retrieval motif**:
+I ask two empirical questions: what retrieval mechanism appears inside a small transformer on a controlled in-context retrieval task, and which parts of that mechanism remain stable across training, seeds, and curricula. I answer those questions with three linked experiments: a symbolic key-value task where a retrieval circuit can be reverse-engineered after training, a story next-token benchmark that serves as a negative control and fails in the way a memorizing model should, and a full `150`-epoch six-run textual retrieval matrix tracked checkpoint by checkpoint across curricula and seeds. The evidence supports a role-level motif rather than one universal head graph or one universal epoch of circuit birth [(Olsson et al., 2022)](https://arxiv.org/abs/2209.11895), [(Nanda et al., 2023)](https://arxiv.org/abs/2301.05217).
 
-- an upstream support or setup computation
-- a downstream retrieval or write computation
-- strong query-key and selected-value representations
-- a matching step that is real but often more distributed than a single neat probe variable
-
-This page tells that story from top to bottom. It starts with the smallest symbolic benchmark where a retrieval circuit can be reverse-engineered after training, checks the measurement stack on a benchmark that should fail if the model is only memorizing, and then moves to a larger textual retrieval benchmark where the same circuit family can be followed across checkpoints, seeds, and curricula.
-
+<a id="main-result"></a>
 ## Main Result
 
 The strongest claim supported by the full evidence is:
@@ -33,51 +41,22 @@ The strongest claim supported by the full evidence is:
 That motif has four recurring properties:
 
 - a downstream layer-2 retrieval or write role that is the most stable part of the mechanism
-- an additional upstream support or setup computation
-- very strong query-key and selected-value structure by the end of training
+- an additional upstream support or setup computation, with the largest final ablation usually landing on a layer-1 head
+- very strong query-key and selected-value representations by the end of training, even when strict sitewise faithfulness is not uniform in every seed
 - a slot-matching computation that is real but often more distributed and later-settling than the other parts
 
-## Question
+This is closer to a causal circuit family than to a single fixed head graph [(Wang et al., 2022)](https://arxiv.org/abs/2211.00593).
 
-The project studies two empirical questions:
+<a id="setup"></a>
+## Experimental Setup And Measurements
 
-1. What retrieval mechanism appears inside a small transformer on a controlled in-context retrieval task?
-2. Which parts of that mechanism stay stable across training, seeds, and curricula?
-
-The project does **not** yet claim a mathematical derivation of why gradient descent builds that motif. The current evidence is empirical: what forms, when it forms, what stays stable, and where the interpretation breaks down.
-
-These experiments sit inside a broader mechanistic agenda: where useful computation is localized, why optimization discovers some circuits and not others, how internal structure shapes outputs, and when compact models become polysemantic by reusing the same representational directions for multiple functions.
-
-## Shared Experimental Setup
-
-Across the training-dynamics experiments, the repository uses a small decoder-only transformer with:
+Across the training-dynamics experiments, I use a small decoder-only transformer with:
 
 - causal self-attention
 - RoPE position encoding
 - RMSNorm
 - SwiGLU MLP blocks
 - tied embeddings and output logits
-
-Core model implementation:
-
-- [`scripts/tiny_transformer_core.py`]({{ site.repository_url }}/blob/main/scripts/tiny_transformer_core.py)
-
-The standard workflow is:
-
-1. train a model while logging optimization telemetry
-2. save checkpoint `0`, dense early checkpoints, and the final checkpoint
-3. run a mechanistic battery on each saved checkpoint
-4. aggregate checkpoint artifacts into run-level and grouped summaries
-5. render figures from those summaries
-
-Core scripts:
-
-- [`scripts/train_run.py`]({{ site.repository_url }}/blob/main/scripts/train_run.py)
-- [`scripts/run_checkpoint_battery.py`]({{ site.repository_url }}/blob/main/scripts/run_checkpoint_battery.py)
-- [`scripts/summarize_training_dynamics.py`]({{ site.repository_url }}/blob/main/scripts/summarize_training_dynamics.py)
-- [`scripts/visualize_kv_circuit_dynamics.py`]({{ site.repository_url }}/blob/main/scripts/visualize_kv_circuit_dynamics.py)
-
-## What Is Recorded
 
 Per training step the runs record:
 
@@ -100,18 +79,22 @@ Per checkpoint the battery records:
 - representation drift
 - operator handoffs
 
-These measurements answer different questions:
+These measurements separate:
 
-- behavior asks whether the model really solves the task on held-out and OOD data
-- probes ask whether a representation contains decodable task information
-- faithfulness asks whether that information is causally useful rather than merely readable
-- operator scores ask whether a head looks routing-like or copy-like
-- localization asks whether ablating a component actually hurts the behavior
-- drift and handoffs ask whether the mechanism stabilizes or keeps reorganizing
+- behavior from internal structure
+- readable variables from causally useful variables
+- operator identity from role stability
+- early assembly from late cleanup or reorganization
+
+Birth epochs are defined as the first checkpoint whose primary score crosses the reported threshold. For operator, variable, and faithfulness metrics, the birth also has to pass a cross-family minimum gate of `0.75`, so a single easy family cannot create a false birth.
+
+Cross-seed role matching is computed only at the final checkpoint of each run. For each role, heads are ranked by operator score with family-min score as a tiebreaker; the top head is the run's role candidate; and cross-seed stability is summarized with candidate identity, top-`3` overlap, and cosine similarity of the full per-head score profile.
+
+Supporting material, exact commands, curated artifacts, and implementation details are collected in [reproducibility.md](reproducibility.md).
 
 ## 1. Symbolic KV Retrieval
 
-The first benchmark is the symbolic key-value task in [`dataset/phase2/kv_retrieve_3`]({{ site.repository_url }}/tree/main/dataset/phase2/kv_retrieve_3).
+The first benchmark is a symbolic key-value retrieval task.
 
 Prompt format:
 
@@ -134,16 +117,17 @@ Dataset details:
 - OOD split: `4` key-value pairs
 - pair order shuffled inside each prompt
 
-Analyzed checkpoint:
+I analyze the released epoch-`126` checkpoint bundled with the benchmark. Its stored evaluation metadata records that all symbolic benchmark checks pass.
 
-- [`models/kv_retrieve_3/selected_checkpoint.pt`]({{ site.repository_url }}/blob/main/models/kv_retrieve_3/selected_checkpoint.pt)
+Checkpoint details:
+
 - `2` layers
 - `2` heads per layer
 - `d_model = 48`
 - `d_ff = 96`
 - `max_seq_len = 16`
 
-Selected checkpoint performance:
+Released checkpoint performance:
 
 | Split | Accuracy | Mean Margin |
 | --- | ---: | ---: |
@@ -152,16 +136,11 @@ Selected checkpoint performance:
 | Test | `0.9560` | `11.7673` |
 | OOD 4-pair | `0.7280` | `4.8225` |
 
-Canonical analysis:
-
-- [`notebook/kv_retrieve_algorithm_analysis.ipynb`]({{ site.repository_url }}/blob/main/notebook/kv_retrieve_algorithm_analysis.ipynb)
-- [`notebook/kv_retrieve_algorithm_discovery.ipynb`]({{ site.repository_url }}/blob/main/notebook/kv_retrieve_algorithm_discovery.ipynb)
-
 The symbolic benchmark provides the first strong evidence for a retrieval circuit of the form:
 
 `layer-1 support -> layer-2 query retargeting -> layer-2 value write`
 
-This establishes that the project is studying a real learned in-context retrieval mechanism, not a fake toy where the model can solve the task without matching the current prompt.
+This establishes that the study is tracking a real learned in-context retrieval mechanism, not a toy where the model can solve the task without matching the current prompt.
 
 ## 2. Story Next-Token Negative Control
 
@@ -256,10 +235,11 @@ Birth thresholds used in the summaries:
 - operator score `0.85`
 - variable score `0.85`
 - faithfulness score `0.85`
+- operator / variable / faithfulness family-min gate `0.75`
 
 ### Pilot Run
 
-The pilot is the first clear positive emergence result in the repository.
+The pilot is the first clear positive emergence result in the study.
 
 At epoch `30`:
 
@@ -320,8 +300,9 @@ The pilot is important because it shows a narrow transition window rather than v
 | `29` | `0.9300` | `0.9343` | `0.8587` | `block2_head1` | `0.850` | `block2_head1` | `0.973` |
 | `30` | `0.9393` | `0.9347` | `0.8457` | `block2_head1` | `0.905` | `block2_head1` | `0.991` |
 
-This is one of the clearest pieces of evidence in the project. The run does not improve smoothly. The parts needed for retrieval become coordinated over a short window, and held-out behavior rises rapidly once that coordination locks in.
+This is one of the clearest pieces of evidence in the study. The run does not improve smoothly. The parts needed for retrieval become coordinated over a short window, and held-out behavior rises rapidly once that coordination locks in.
 
+<a id="full-matrix"></a>
 ## Full 150-Epoch Six-Run Matrix
 
 The main experiment is a `2 x 3` matrix:
@@ -349,14 +330,7 @@ Matrix details:
   - curriculum on: `216`
   - curriculum off: `190`
 
-Run manifests:
-
-- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_on_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_on_d64_l2.json)
-- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_on_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_on_d64_l2.json)
-- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_on_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_on_d64_l2.json)
-- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_off_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_off_d64_l2.json)
-- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_off_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_off_d64_l2.json)
-- [`manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_off_d64_l2.json`]({{ site.repository_url }}/blob/main/manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_off_d64_l2.json)
+The exact run manifests and artifact bundle are listed in the supporting material.
 
 ### Grouped Outcome Table
 
@@ -371,7 +345,7 @@ Both conditions solve the task almost perfectly. That rules out one easy story: 
 
 <figure class="paper-figure">
   <img src="figures/textual_kv_full_matrix_overview.png" alt="Grouped full-matrix overview">
-  <figcaption><strong>Figure 7.</strong> Both curricula solve the task almost perfectly. The grouped difference is not whether retrieval works, but how cleanly the matching computation settles compared with query and selected-value structure.</figcaption>
+  <figcaption><strong>Figure 7.</strong> Both curricula solve the task almost perfectly, so the scientific signal is not solvability. The real difference is internal organization: query-key and selected-value structure saturate in both conditions, while the matching computation remains weaker and more variable.</figcaption>
 </figure>
 
 The grouped comparison makes two points visible immediately:
@@ -408,7 +382,7 @@ What is not stable:
 
 <figure class="paper-figure">
   <img src="figures/textual_kv_full_matrix_localization.png" alt="Final localization across all six runs">
-  <figcaption><strong>Figure 8.</strong> Final head ablations across all six runs show a stable downstream layer-2 retrieval effect and a less stable upstream support implementation that moves across seeds.</figcaption>
+  <figcaption><strong>Figure 8.</strong> The stable object is a downstream layer-2 retrieval role, but the single biggest final ablation is usually upstream. In `5/6` runs the strongest final bottleneck is a layer-1 head, which argues for a stable downstream role plus a movable upstream support implementation rather than one fixed head graph.</figcaption>
 </figure>
 
 This heatmap is the clearest compact view of the role-level result:
@@ -439,7 +413,7 @@ There is no single epoch where "the circuit appears." The emergence tables show:
 
 <figure class="paper-figure">
   <img src="figures/textual_kv_full_matrix_emergence.png" alt="Emergence timing across all six runs">
-  <figcaption><strong>Figure 9.</strong> Emergence timing varies substantially across seeds. There is no single universal epoch of circuit birth: behavior, copy, routing, and matching faithfulness cross their thresholds at different times.</figcaption>
+  <figcaption><strong>Figure 9.</strong> Birth epochs spread out dramatically across seeds, and their order can invert. Behavior can arrive tens of epochs before clean routing, while some faithfulness scores appear long before their corresponding probe births, so threshold crossing marks cleanup rather than literal first appearance.</figcaption>
 </figure>
 
 The emergence heatmap makes the staged character of formation hard to miss:
@@ -448,22 +422,51 @@ The emergence heatmap makes the staged character of formation hard to miss:
 - copy can become clean very early while routing stays below threshold for much longer
 - matching-slot faithfulness is the least consistent internal milestone
 
+#### Threshold Robustness
+
+The staged-emergence result is not an artifact of one exact cutoff choice. Recomputing births with nearby primary thresholds leaves the qualitative picture intact:
+
+- behavior threshold `0.85` to `0.95`: birth epochs stay in the range `12` to `38`
+- routing threshold `0.80` to `0.90` with family-min gate fixed at `0.75`: the same five runs still birth at `17`, `31`, `114`, `122`, and `131`, with one persistent non-birth
+- copy threshold `0.80` to `0.90` with family-min gate fixed at `0.75`: births stay at `1`, `17`, `31`, `36`, `62`, and `93`
+- matching-slot faithfulness threshold `0.80` to `0.90` with family-min gate fixed at `0.75`: births stay late and sparse at `40`, `57`, `99`, and `122`, with two persistent non-births
+
+So the exact epoch numbers are threshold-dependent in the expected way, but the paper's main conclusion survives: birth times remain widely spread, and the ordering of behavior, copy, routing, and matching-related milestones still fails to collapse into one universal trajectory.
+
+### Matching-Slot Is The Hardest Part To Cleanly Localize
+
+One result deserves separate emphasis because it appears in multiple batteries at once.
+
+What the six-run matrix shows:
+
+- `variable_matching_slot` never crosses birth threshold in any of the six runs
+- `faithfulness_matching_slot` does emerge in `4/6` runs
+- at the final checkpoints, `matching_slot` is the top tracked sparse feature at only `5/36` sites with curriculum on and `4/36` sites with curriculum off
+- at the final checkpoints, `matching_slot` is the top tracked neuron variable in `0` cases under either curriculum
+
+That pattern is stronger than a single weak probe result. It says the model is often using slot matching causally, but usually not as one neat probe-friendly axis. Matching appears to be the most distributed or implicit part of the retrieval motif.
+
+That interpretation is also consistent with superposition-style accounts of overlapping internal structure [(Anthropic, 2022)](https://www.anthropic.com/research/toy-models-of-superposition), [(Anthropic, 2023)](https://www.anthropic.com/research/towards-monosemanticity-decomposing-language-models-with-dictionary-learning).
+
 ### Additional Signals Hidden In The Summaries
 
 | Signal | Curriculum On | Curriculum Off | Why It Matters |
 | --- | --- | --- | --- |
-| Final routing role identity | `block2_head1` in `2/3` seeds, `block2_head0` in `1/3` | `block2_head0` in `3/3` seeds | downstream routing is the most stable role in the project |
+| Final routing role identity | `block2_head1` in `2/3` seeds, `block2_head0` in `1/3` | `block2_head0` in `3/3` seeds | downstream routing is the most stable role in the study |
 | Routing score-profile cosine across seeds | `> 0.97` in every pairwise comparison | `~0.9997` to `~0.9999` | role stability is stronger than raw head-name stability |
 | Mean operator handoffs, copy | `11` | `3` | curriculum-on runs reorganize more while assembling the mechanism |
 | Mean operator handoffs, routing | `12` | `9` | routing keeps sharpening and sometimes reassigning late |
 | Matching-slot faithfulness births | `3/3` runs | `1/3` runs | curriculum mainly affects the cleanliness of the matching step |
 | Hardest final behavior family | usually `longer_context_ood` | usually `longer_context_ood`, except one mild `value_permutation` weakness | the main remaining difficulty is context-length generalization |
+| Strongest final ablation head in layer 1 | `2/3` runs | `3/3` runs | the stable downstream role still depends on an upstream bottleneck in most seeds |
+| Top final feature / neuron labels | dominated by `query_key` and `selected_value`; `matching_slot` is rare | dominated by `query_key` and `selected_value`; `matching_slot` is rare | the feature and neuron batteries agree that matching is the least neatly packaged part |
+| Most weakly stabilized late representation | `block2_final_mlp_out` | `block2_final_mlp_out` | the late writeout region keeps reorganizing longer than the cleaner upstream representations |
 
 ### Stability, Turnover, And Birth Summary
 
 <figure class="paper-figure">
   <img src="figures/textual_kv_full_matrix_stability.png" alt="Full-matrix stability, turnover, and grouped birth summary">
-  <figcaption><strong>Figure 10.</strong> Routing is more stable at the score-profile level than raw head identities suggest. Curriculum-on runs turn over more while assembling the mechanism, but they also make matching-slot faithfulness more consistent.</figcaption>
+  <figcaption><strong>Figure 10.</strong> Routing is almost perfectly stable at the score-profile level even when head identities move, copy is less stable, and curriculum-on increases turnover while making matching-slot faithfulness much more reliable. Curriculum changes organization more than solvability.</figcaption>
 </figure>
 
 This summary figure compresses the grouped evidence behind the main interpretation:
@@ -472,6 +475,7 @@ This summary figure compresses the grouped evidence behind the main interpretati
 - curriculum-on runs reorganize more while assembling the mechanism
 - curriculum mainly improves the consistency of matching-slot faithfulness, not the ability to solve the task
 
+<a id="formation"></a>
 ## Empirical Answer: How The Circuit Forms
 
 The current evidence supports the following empirical formation story.
@@ -513,16 +517,7 @@ So the strongest supported claim is:
 
 ### 4. The matching step is the hardest part to cleanly localize
 
-`matching_slot` is the weakest part of the internal story.
-
-What the matrix shows:
-
-- `variable_matching_slot` never reaches birth threshold in any of the six full runs
-- `faithfulness_matching_slot` emerges in `4/6` runs
-  - `3/3` curriculum on
-  - `1/3` curriculum off
-
-That means the model is often using slot matching causally, but usually not as one neat high-scoring linearly probeable variable.
+`matching_slot` is the weakest part of the internal story, and the dedicated matching section above shows that this is not just one bad probe. The probe battery, faithfulness battery, sparse features, and neuron summaries all agree that slot matching is real but unusually distributed.
 
 ### 5. Behavior can become strong before routing looks clean by the strict operator metric
 
@@ -567,7 +562,7 @@ What changes is not whether the retrieval motif exists, but how cleanly the last
 - epoch `19`: selected-value faithfulness appears
 - by epoch `19`, val and test are already `1.0` and OOD is `0.998`
 
-The strongest empirical answer this project can currently give is:
+The strongest empirical answer this study can currently give is:
 
 **the circuit forms in stages, through partial retrieval pieces becoming coordinated, with a very stable downstream retrieval role and a much less stable upstream implementation.**
 
@@ -594,12 +589,13 @@ That staged motif looks like this:
 
 - a strong downstream layer-2 retrieval or write role
 - an additional upstream support or setup component
-- very strong query-key and selected-value structure by the end
+- very strong query-key and selected-value structure by the end, even though strict sitewise faithfulness is not perfectly uniform in every seed
 - a slot-matching computation that is real but often more distributed and later-settling than the other parts
 
+<a id="limits"></a>
 ## Limits
 
-The project also makes several deliberate non-claims.
+The study also makes several deliberate non-claims.
 
 It does not yet show:
 
@@ -610,58 +606,24 @@ It does not yet show:
 
 Those are the current boundary of the evidence, not hidden exceptions.
 
-## GPT-2 Activation Viewer
+<a id="related-work"></a>
+## Related Work And References
 
-The repository also includes a lightweight GPT-2 activation viewer for prompt-level inspection.
+This study sits at the intersection of four nearby lines of work.
 
-<figure class="paper-figure">
-  <img src="figures/gpt2_activation_viewer.png" alt="GPT-2 activation viewer">
-  <figcaption><strong>Figure 11.</strong> Lightweight prompt-level activation viewer for GPT-2 inspection. This is separate from the small-transformer training-dynamics pipeline, but kept in the repository as a compact inspection tool.</figcaption>
-</figure>
+First, the most direct predecessor is the induction-head literature. [Olsson et al. (2022)](https://arxiv.org/abs/2209.11895) showed that in-context learning in transformers can be linked to a concrete attention-head mechanism, and that this mechanism emerges during training rather than existing from the start. The retrieval benchmark here is smaller and more controlled, but it asks a parallel question: whether an in-context retrieval behavior decomposes into a reusable motif and whether that motif can be tracked as it forms.
 
-Build a viewer payload:
+Second, this work is close in spirit to full-circuit reverse engineering in more natural settings. [Wang et al. (2022)](https://arxiv.org/abs/2211.00593) on indirect object identification showed that a natural language behavior can be explained by a large but structured circuit and evaluated with faithfulness-style criteria. The present experiments operate in a much smaller regime, but the same distinction matters here: the goal is not just to find decodable variables, but to recover a causal mechanism.
 
-```bash
-.venv/bin/python scripts/build_interactive_model_viewer.py \
-  --prompt "The secret code is 73914. Repeat the secret code exactly:" \
-  --prompt-id demo_prompt_001 \
-  --task copy \
-  --model gpt2-small \
-  --out outputs/viewer_payload.json
-```
+Third, the staged-emergence result belongs in the same conversation as grokking and progress-measure work. [Power et al. (2022)](https://arxiv.org/abs/2201.02177) made small algorithmic datasets into a tractable setting for studying delayed generalization, and [Nanda et al. (2023)](https://arxiv.org/abs/2301.05217) argued that apparently sharp transitions can hide smoother internal progress measures. The six-run matrix here points to a similar picture: behavior, copy, routing, and matching-related signals do not appear at one universal birth point, and threshold crossings often mark cleanup rather than literal first appearance.
 
-Run the viewer:
+Fourth, the feature and representation interpretation in this study is informed by superposition and sparse-feature work from Anthropic. [Toy Models of Superposition](https://www.anthropic.com/research/toy-models-of-superposition) motivates why clean one-neuron or one-direction explanations are often too optimistic, [Towards Monosemanticity](https://www.anthropic.com/research/towards-monosemanticity-decomposing-language-models-with-dictionary-learning) motivates sparse dictionary-style decomposition, and [Superposition, Memorization, and Double Descent](https://www.anthropic.com/news/superposition-memorization-and-double-descent) is directly relevant to the tension between retrieval circuits and shortcut or memorizing solutions. The matching-slot result here fits that theme: the model appears to use slot matching causally, but not usually as one neat isolated feature.
 
-```bash
-cd webapp
-.venv/bin/python -m http.server 8000
-```
-
-Then open `http://localhost:8000` and upload `outputs/viewer_payload.json`.
-
-## Reproducibility
-
-- [Reproducibility notes](reproducibility.md)
-
-## Repository Sources For The Reported Experiments
-
-The experiments reported on this page are repository artifacts, not external papers. The exact toy-model datasets, manifests, notebooks, scripts, and curated outputs live in this GitHub repository:
-
-- [Repository root]({{ site.repository_url }})
-- [Full repository report]({{ site.repository_url }}/blob/main/results.md)
-- [Reproducibility commands]({{ site.repository_url }}/blob/main/docs/reproducibility.md)
-- [Phase 2 datasets]({{ site.repository_url }}/tree/main/dataset/phase2)
-- [Phase 2 manifests]({{ site.repository_url }}/tree/main/manifests/phase2)
-- [Public evidence bundle]({{ site.repository_url }}/tree/main/artifacts/phase2)
-- [Static-analysis notebooks]({{ site.repository_url }}/tree/main/notebook)
-
-## References
-
-The prior external work most relevant to the framing and methods used here is:
-
-1. Anthropic, “Toy Models of Superposition,” September 14, 2022. [https://www.anthropic.com/research/toy-models-of-superposition](https://www.anthropic.com/research/toy-models-of-superposition)
-2. Anthropic, “Towards Monosemanticity: Decomposing Language Models With Dictionary Learning,” October 5, 2023. [https://www.anthropic.com/research/towards-monosemanticity-decomposing-language-models-with-dictionary-learning](https://www.anthropic.com/research/towards-monosemanticity-decomposing-language-models-with-dictionary-learning)
-3. Anthropic, “Superposition, Memorization, and Double Descent,” January 5, 2023. [https://www.anthropic.com/news/superposition-memorization-and-double-descent](https://www.anthropic.com/news/superposition-memorization-and-double-descent)
-4. Anthropic, “Tracing the thoughts of a large language model,” March 27, 2025. This release introduces the paper “Circuit tracing: Revealing computational graphs in language models.” [https://www.anthropic.com/research/tracing-thoughts-language-model](https://www.anthropic.com/research/tracing-thoughts-language-model)
-
-This page is the canonical public report for the repository. Prior interpretability papers are cited above; the toy-model experiments described on this page are documented in the linked GitHub repository artifacts.
+1. Olsson et al., “In-context Learning and Induction Heads,” 2022. [https://arxiv.org/abs/2209.11895](https://arxiv.org/abs/2209.11895)
+2. Wang et al., “Interpretability in the Wild: a Circuit for Indirect Object Identification in GPT-2 small,” 2022. [https://arxiv.org/abs/2211.00593](https://arxiv.org/abs/2211.00593)
+3. Power et al., “Grokking: Generalization Beyond Overfitting on Small Algorithmic Datasets,” 2022. [https://arxiv.org/abs/2201.02177](https://arxiv.org/abs/2201.02177)
+4. Nanda et al., “Progress Measures for Grokking via Mechanistic Interpretability,” 2023. [https://arxiv.org/abs/2301.05217](https://arxiv.org/abs/2301.05217)
+5. Anthropic, “Toy Models of Superposition,” 2022. [https://www.anthropic.com/research/toy-models-of-superposition](https://www.anthropic.com/research/toy-models-of-superposition)
+6. Anthropic, “Towards Monosemanticity: Decomposing Language Models With Dictionary Learning,” 2023. [https://www.anthropic.com/research/towards-monosemanticity-decomposing-language-models-with-dictionary-learning](https://www.anthropic.com/research/towards-monosemanticity-decomposing-language-models-with-dictionary-learning)
+7. Anthropic, “Superposition, Memorization, and Double Descent,” 2023. [https://www.anthropic.com/news/superposition-memorization-and-double-descent](https://www.anthropic.com/news/superposition-memorization-and-double-descent)
+8. Anthropic, “Tracing the thoughts of a large language model,” 2025. [https://www.anthropic.com/research/tracing-thoughts-language-model](https://www.anthropic.com/research/tracing-thoughts-language-model)

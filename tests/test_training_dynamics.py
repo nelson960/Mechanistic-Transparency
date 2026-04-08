@@ -7,10 +7,19 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import torch
+
+from scripts.device_utils import resolve_training_device
+from scripts.kv_benchmark import instantiate_kv_model
 from scripts.kv_algorithm_oracle import annotate_row
 from scripts.kv_algorithm_record import build_final_position_site_list
 from scripts.kv_algorithm_sweeps import generate_controlled_sweeps
-from scripts.kv_retrieve_analysis import load_checkpoint_model, load_dataset_bundle, run_prompt
+from scripts.kv_retrieve_analysis import (
+    load_checkpoint_model,
+    load_dataset_bundle,
+    ov_source_logits,
+    run_prompt,
+)
 from scripts.tiny_transformer_core import TinyDecoderTransformer
 from scripts.training_dynamics import build_checkpoint_epoch_schedule, build_run_manifest
 
@@ -99,6 +108,21 @@ def make_manifest_dict(dataset_dir: Path, output_dir: Path, *, seed: int, epochs
 
 
 class TrainingDynamicsTest(unittest.TestCase):
+    def test_resolve_training_device_auto_prefers_mps_when_available(self) -> None:
+        from unittest.mock import patch
+
+        with patch("scripts.device_utils._mps_is_available", return_value=True), patch(
+            "scripts.device_utils._cuda_is_available", return_value=False
+        ):
+            self.assertEqual(resolve_training_device("auto"), "mps")
+
+    def test_resolve_training_device_rejects_unavailable_mps(self) -> None:
+        from unittest.mock import patch
+
+        with patch("scripts.device_utils._mps_is_available", return_value=False):
+            with self.assertRaises(ValueError):
+                resolve_training_device("mps")
+
     def test_manifest_validation_rejects_non_divisible_heads(self) -> None:
         manifest_dict = make_manifest_dict(ROOT / "dataset" / "kv_retrieve_3", ROOT / "temp" / "invalid", seed=0)
         manifest_dict["model"]["d_model"] = 15
@@ -186,6 +210,144 @@ class TrainingDynamicsTest(unittest.TestCase):
             self.assertTrue((dataset_dir / "train_3_pairs.jsonl").exists())
             metadata = json.loads((dataset_dir / "metadata.json").read_text(encoding="utf-8"))
             self.assertEqual(metadata["training_splits"], {"2": "train_2_pairs", "3": "train_3_pairs"})
+
+    def test_dataset_generator_supports_fixed_query_slot_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset_dir = Path(temp_dir) / "dataset"
+            run_command(
+                "scripts/generate_kv_retrieval_dataset.py",
+                "--outdir",
+                str(dataset_dir),
+                "--train-size",
+                "8",
+                "--val-size",
+                "4",
+                "--test-size",
+                "4",
+                "--ood-size",
+                "4",
+                "--context-pairs",
+                "2",
+                "--train-context-pairs",
+                "2",
+                "--ood-context-pairs",
+                "3",
+                "--query-slot-policy",
+                "fixed_first",
+                "--seed",
+                "13",
+            )
+            first_train_row = json.loads((dataset_dir / "train.jsonl").read_text(encoding="utf-8").splitlines()[0])
+            self.assertEqual(first_train_row["query_key"], first_train_row["context_pairs"][0]["key"])
+            metadata = json.loads((dataset_dir / "metadata.json").read_text(encoding="utf-8"))
+            self.assertEqual(metadata["generation_rules"]["query_slot_policy"], "fixed_first")
+
+    def test_manifest_accepts_initialization_scale_and_model_rescales_weights(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset_dir = Path(temp_dir) / "dataset"
+            run_command(
+                "scripts/generate_kv_retrieval_dataset.py",
+                "--outdir",
+                str(dataset_dir),
+                "--train-size",
+                "8",
+                "--val-size",
+                "4",
+                "--test-size",
+                "4",
+                "--ood-size",
+                "4",
+                "--train-context-pairs",
+                "2",
+                "--seed",
+                "5",
+            )
+            bundle = load_dataset_bundle(dataset_dir)
+            manifest_dict = make_manifest_dict(dataset_dir, Path(temp_dir) / "run_seed0", seed=0)
+            manifest_base = build_run_manifest(manifest_dict)
+            manifest_scaled = build_run_manifest({**manifest_dict, "initialization": {"scale": 2.0}})
+            self.assertEqual(manifest_base.initialization.scale, 1.0)
+            self.assertEqual(manifest_scaled.initialization.scale, 2.0)
+
+            torch.manual_seed(0)
+            base_model = instantiate_kv_model(manifest_base, bundle, device=torch.device("cpu"))
+            torch.manual_seed(0)
+            scaled_model = instantiate_kv_model(manifest_scaled, bundle, device=torch.device("cpu"))
+            base_norm = float(base_model.blocks[0].attn.q_proj.weight.norm().item())
+            scaled_norm = float(scaled_model.blocks[0].attn.q_proj.weight.norm().item())
+            self.assertAlmostEqual(scaled_norm / base_norm, 2.0, places=5)
+
+    def test_factor_screen_builder_writes_python_specific_scripts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            manifest_dir = temp_root / "manifests"
+            dataset_root = temp_root / "datasets"
+            run_root = temp_root / "runs"
+            run_command(
+                "-m",
+                "research.phase3.scripts.build_kv_factor_screen",
+                "--manifest-outdir",
+                str(manifest_dir),
+                "--dataset-root",
+                str(dataset_root),
+                "--run-root",
+                str(run_root),
+                "--python-bin",
+                "/opt/miniconda3/envs/ml/bin/python",
+                "--seeds",
+                "0,1",
+                "--init-scales",
+                "1.0",
+                "--weight-decays",
+                "0.0",
+                "--d-models",
+                "64",
+                "--query-slot-policies",
+                "balanced",
+                "--epochs",
+                "1",
+            )
+            dataset_script = (manifest_dir / "dataset_build_commands.sh").read_text(encoding="utf-8")
+            run_script = (manifest_dir / "run_manifests_sequential.sh").read_text(encoding="utf-8")
+            manifest_matrix = (manifest_dir / "manifest_matrix.csv").read_text(encoding="utf-8")
+            manifest_payload = json.loads((manifest_dir / "seed0_slot_balanced_d64_wd0_init1.json").read_text(encoding="utf-8"))
+            self.assertIn("/opt/miniconda3/envs/ml/bin/python -m scripts.generate_kv_retrieval_dataset", dataset_script)
+            self.assertIn("/opt/miniconda3/envs/ml/bin/python -m research.phase3.scripts.run_kv_factor_screen", run_script)
+            self.assertIn(str(run_root), manifest_matrix)
+            self.assertEqual(manifest_payload["checkpoint_schedule"]["dense_through_epoch"], 1)
+            self.assertEqual(manifest_payload["checkpoint_schedule"]["log_spaced_epoch_count"], 0)
+
+    def test_ov_source_logits_respects_batch_index(self) -> None:
+        model = TinyDecoderTransformer(
+            vocab_size=2,
+            d_model=2,
+            n_heads=1,
+            d_ff=4,
+            n_layers=1,
+            max_seq_len=2,
+        )
+        with torch.no_grad():
+            model.blocks[0].attn.v_proj.weight.copy_(torch.eye(2))
+            model.blocks[0].attn.o_proj.weight.copy_(torch.eye(2))
+            model.token_embed.weight.copy_(torch.eye(2))
+
+        cache = {
+            "blocks": [
+                {
+                    "attn_in": torch.tensor(
+                        [
+                            [[1.0, 0.0], [0.0, 1.0]],
+                            [[0.0, 1.0], [1.0, 0.0]],
+                        ],
+                        dtype=torch.float32,
+                    )
+                }
+            ]
+        }
+        logits_batch0 = ov_source_logits(model, cache, layer_index=0, head_index=0, source_position=0, batch_index=0)
+        logits_batch1 = ov_source_logits(model, cache, layer_index=0, head_index=0, source_position=0, batch_index=1)
+        self.assertEqual(logits_batch0.argmax().item(), 0)
+        self.assertEqual(logits_batch1.argmax().item(), 1)
 
     def test_legacy_checkpoint_compatibility(self) -> None:
         bundle = load_dataset_bundle(ROOT / "dataset" / "kv_retrieve_3")

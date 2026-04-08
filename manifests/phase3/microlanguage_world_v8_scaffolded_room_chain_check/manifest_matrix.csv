@@ -1,0 +1,2 @@
+condition_id,seed,learning_rate,n_layers,epochs,max_seq_len,manifest_path,run_dir,dataset_dir
+lr0p0003_l2_ep80_ms64,0,0.0003,2,80,64,/Users/nelson/py/mechanistic_inter/manifests/phase3/microlanguage_world_v8_scaffolded_room_chain_check/lr0p0003_l2_ep80_ms64/lr0p0003_l2_ep80_ms64_seed0.json,/Users/nelson/py/mechanistic_inter/runs/phase3/microlanguage_world_v8_scaffolded_room_chain_check/lr0p0003_l2_ep80_ms64/lr0p0003_l2_ep80_ms64_seed0,/Users/nelson/py/mechanistic_inter/dataset/phase3/microlanguage_world_v8_scaffolded_room_chain

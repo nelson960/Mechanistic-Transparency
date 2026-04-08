@@ -1,0 +1,26 @@
+{
+  "num_dataset_variants": 1,
+  "num_manifests": 3,
+  "query_slot_policies": [
+    "balanced"
+  ],
+  "d_models": [
+    64
+  ],
+  "weight_decays": [
+    0.0
+  ],
+  "init_scales": [
+    1.0
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "dataset_matrix_path": "/Users/nelson/py/mechanistic_inter/manifests/phase3/kv_balanced_d64_init1_wd0/dataset_matrix.csv",
+  "manifest_matrix_path": "/Users/nelson/py/mechanistic_inter/manifests/phase3/kv_balanced_d64_init1_wd0/manifest_matrix.csv",
+  "dataset_build_script_path": "/Users/nelson/py/mechanistic_inter/manifests/phase3/kv_balanced_d64_init1_wd0/dataset_build_commands.sh",
+  "run_script_path": "/Users/nelson/py/mechanistic_inter/manifests/phase3/kv_balanced_d64_init1_wd0/run_manifests_sequential.sh",
+  "python_bin": "/opt/miniconda3/envs/ml/bin/python"
+}

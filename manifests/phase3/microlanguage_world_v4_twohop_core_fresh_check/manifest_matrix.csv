@@ -1,0 +1,2 @@
+condition_id,seed,learning_rate,n_layers,epochs,max_seq_len,manifest_path,run_dir,dataset_dir
+lr0p001_l2_ep60_ms48,0,0.001,2,60,48,/Users/nelson/py/mechanistic_inter/manifests/phase3/microlanguage_world_v4_twohop_core_fresh_check/lr0p001_l2_ep60_ms48/lr0p001_l2_ep60_ms48_seed0.json,/Users/nelson/py/mechanistic_inter/runs/phase3/microlanguage_world_v4_twohop_core_fresh_check/lr0p001_l2_ep60_ms48/lr0p001_l2_ep60_ms48_seed0,/Users/nelson/py/mechanistic_inter/dataset/phase3/microlanguage_world_v4_twohop_core

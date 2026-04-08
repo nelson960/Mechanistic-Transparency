@@ -81,6 +81,39 @@ li {
   margin-bottom: 1.6rem;
 }
 
+.paper-byline {
+  margin-top: -0.75rem;
+  margin-bottom: 1rem;
+  color: #5a5247;
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.paper-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 0.9rem;
+  align-items: center;
+  margin: 0 0 1.7rem 0;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid #e5dfd2;
+  background: #f8f4ec;
+  font-size: 0.95rem;
+}
+
+.paper-nav strong {
+  color: #2f2c27;
+}
+
+.paper-nav a {
+  color: #5a5247;
+  text-decoration: none;
+}
+
+.paper-nav a:hover {
+  text-decoration: underline;
+}
+
 ul,
 ol {
   margin-top: 0.4rem;

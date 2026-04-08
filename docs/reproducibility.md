@@ -5,13 +5,15 @@ title: Reproducibility
 
 # Reproducibility
 
-Run commands from the repository root.
+This page is supporting material for the paper. Run commands from the repository root. The folder names shown below reflect the repository layout.
 
 ## Environment
 
 ```bash
-cd .
-conda activate ml
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
 ## Static KV Analysis
@@ -22,10 +24,12 @@ Static analysis uses the checked-in symbolic KV dataset and checkpoint:
 - `models/kv_retrieve_3/selected_checkpoint.pt`
 - `notebook/kv_retrieve_algorithm_analysis.ipynb`
 
+The symbolic reverse-engineering walkthrough is notebook-based rather than exposed as one single CLI reproduction script.
+
 ## Story Negative Control
 
 ```bash
-python -m scripts.train_story_text_circuit_loop \
+.venv/bin/python -m scripts.train_story_text_circuit_loop \
   --text-path dataset/phase2/random_story_dataset_v1.txt \
   --run-dir runs/story_text_circuit_run_001 \
   --context-length 24 \
@@ -65,7 +69,7 @@ python -m scripts.train_story_text_circuit_loop \
 ## Textual KV Dataset
 
 ```bash
-python -m scripts.generate_kv_retrieval_dataset \
+.venv/bin/python -m scripts.generate_kv_retrieval_dataset \
   --outdir dataset/phase2/kv_retrieve_textual_balanced_v1 \
   --dataset-name kv_retrieve_textual_balanced_v1 \
   --train-size 30000 \
@@ -86,14 +90,14 @@ python -m scripts.generate_kv_retrieval_dataset \
 ## Textual KV Pilot
 
 ```bash
-python -m scripts.train_run \
+.venv/bin/python -m scripts.train_run \
   --manifest manifests/phase2/kv_textual_balanced_v1/pilot_seed0_curriculum_on_d64_l2.json
 
-python -m scripts.run_checkpoint_battery \
+.venv/bin/python -m scripts.run_checkpoint_battery \
   --run-dir runs/kv_textual_balanced_v1/pilot_seed0_curriculum_on_d64_l2 \
   --skip-complete
 
-python -m scripts.summarize_training_dynamics \
+.venv/bin/python -m scripts.summarize_training_dynamics \
   --target-dir runs/kv_textual_balanced_v1/pilot_seed0_curriculum_on_d64_l2
 ```
 
@@ -102,63 +106,63 @@ python -m scripts.summarize_training_dynamics \
 ### Curriculum On
 
 ```bash
-python -m scripts.train_run \
+.venv/bin/python -m scripts.train_run \
   --manifest manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_on_d64_l2.json
-python -m scripts.train_run \
+.venv/bin/python -m scripts.train_run \
   --manifest manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_on_d64_l2.json
-python -m scripts.train_run \
+.venv/bin/python -m scripts.train_run \
   --manifest manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_on_d64_l2.json
 ```
 
 ```bash
-python -m scripts.run_checkpoint_battery \
+.venv/bin/python -m scripts.run_checkpoint_battery \
   --run-dir runs/kv_textual_balanced_v1/curriculum_on/baseline_seed0_curriculum_on_d64_l2 \
   --skip-complete
-python -m scripts.run_checkpoint_battery \
+.venv/bin/python -m scripts.run_checkpoint_battery \
   --run-dir runs/kv_textual_balanced_v1/curriculum_on/baseline_seed1_curriculum_on_d64_l2 \
   --skip-complete
-python -m scripts.run_checkpoint_battery \
+.venv/bin/python -m scripts.run_checkpoint_battery \
   --run-dir runs/kv_textual_balanced_v1/curriculum_on/baseline_seed2_curriculum_on_d64_l2 \
   --skip-complete
 ```
 
 ```bash
-python -m scripts.summarize_training_dynamics \
+.venv/bin/python -m scripts.summarize_training_dynamics \
   --target-dir runs/kv_textual_balanced_v1/curriculum_on
 ```
 
 ### Curriculum Off
 
 ```bash
-python -m scripts.train_run \
+.venv/bin/python -m scripts.train_run \
   --manifest manifests/phase2/kv_textual_balanced_v1/baseline_seed0_curriculum_off_d64_l2.json
-python -m scripts.train_run \
+.venv/bin/python -m scripts.train_run \
   --manifest manifests/phase2/kv_textual_balanced_v1/baseline_seed1_curriculum_off_d64_l2.json
-python -m scripts.train_run \
+.venv/bin/python -m scripts.train_run \
   --manifest manifests/phase2/kv_textual_balanced_v1/baseline_seed2_curriculum_off_d64_l2.json
 ```
 
 ```bash
-python -m scripts.run_checkpoint_battery \
+.venv/bin/python -m scripts.run_checkpoint_battery \
   --run-dir runs/kv_textual_balanced_v1/curriculum_off/baseline_seed0_curriculum_off_d64_l2 \
   --skip-complete
-python -m scripts.run_checkpoint_battery \
+.venv/bin/python -m scripts.run_checkpoint_battery \
   --run-dir runs/kv_textual_balanced_v1/curriculum_off/baseline_seed1_curriculum_off_d64_l2 \
   --skip-complete
-python -m scripts.run_checkpoint_battery \
+.venv/bin/python -m scripts.run_checkpoint_battery \
   --run-dir runs/kv_textual_balanced_v1/curriculum_off/baseline_seed2_curriculum_off_d64_l2 \
   --skip-complete
 ```
 
 ```bash
-python -m scripts.summarize_training_dynamics \
+.venv/bin/python -m scripts.summarize_training_dynamics \
   --target-dir runs/kv_textual_balanced_v1/curriculum_off
 ```
 
 ## Visuals
 
 ```bash
-python -m scripts.visualize_kv_circuit_dynamics \
+MPLCONFIGDIR=/tmp XDG_CACHE_HOME=/tmp .venv/bin/python -m scripts.visualize_kv_circuit_dynamics \
   --run-dir runs/kv_textual_balanced_v1/pilot_seed0_curriculum_on_d64_l2 \
   --out-dir runs/kv_textual_balanced_v1/pilot_seed0_curriculum_on_d64_l2_visuals_v4 \
   --checkpoint-kind scheduled
