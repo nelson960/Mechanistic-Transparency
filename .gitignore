@@ -43,6 +43,7 @@ dataset/phase3/
 # Project-generated artifacts
 outputs/
 pics/
+paper/
 
 # Editor and OS files
 .DS_Store

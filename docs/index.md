@@ -36,7 +36,7 @@ I ask two empirical questions: what retrieval mechanism appears inside a small t
 
 The strongest claim supported by the full evidence is:
 
-**small transformers repeatedly learn a staged retrieval motif, not one fixed universal head graph.**
+**Small transformers repeatedly learn a staged retrieval motif, not one fixed universal head graph.**
 
 That motif has four recurring properties:
 
@@ -47,10 +47,14 @@ That motif has four recurring properties:
 
 This is closer to a causal circuit family than to a single fixed head graph [(Wang et al., 2022)](https://arxiv.org/abs/2211.00593).
 
+The contribution here is not to show that retrieval-like mechanisms exist in transformers. The new result is a controlled emergence study: a matched negative control, a full checkpoint-by-checkpoint six-run matrix across seeds and curricula, evidence that the stable object is a role-level motif rather than one fixed head graph, and evidence that slot matching is causally real but more distributed than the rest of the motif.
+
 <a id="setup"></a>
 ## Experimental Setup And Measurements
 
 Across the training-dynamics experiments, I use a small decoder-only transformer with:
+
+The models are intentionally tiny (`d_model = 48-64`, `2` layers) so full circuit structure and checkpoint-by-checkpoint training dynamics can be inspected directly; the paper therefore establishes regularities in a tractable regime rather than a scaling claim about larger language models.
 
 - causal self-attention
 - RoPE position encoding
@@ -391,6 +395,8 @@ This heatmap is the clearest compact view of the role-level result:
 - the strongest downstream retrieval effect stays in layer 2
 - the strongest upstream support effect moves across seeds
 
+Figures `7` through `10` should be read together. Figure `7` shows that both curricula solve the task nearly perfectly, so the scientific signal is not solvability. Figure `8` then shows that the strongest final bottleneck is usually upstream even though the most stable role is downstream. Figure `10` sharpens the cross-seed claim: routing is the most stable score profile, copy is less stable, and curriculum-on trades higher head turnover for more reliable matching-slot faithfulness.
+
 ### Emergence Is Staged, Not Universal
 
 | Condition | Seed | Behavior Birth | Copy Birth | Routing Birth | Matching-Slot Faithfulness Birth |
@@ -422,6 +428,8 @@ The emergence heatmap makes the staged character of formation hard to miss:
 - copy can become clean very early while routing stays below threshold for much longer
 - matching-slot faithfulness is the least consistent internal milestone
 
+The important point is not just that the epochs differ, but that their order can change. In some runs copy becomes clean far before routing, in others behavior and routing arrive together, and in others matching-related faithfulness only becomes robust much later. So the figure is evidence against one fixed internal schedule, not just against one fixed birth epoch.
+
 #### Threshold Robustness
 
 The staged-emergence result is not an artifact of one exact cutoff choice. Recomputing births with nearby primary thresholds leaves the qualitative picture intact:
@@ -432,6 +440,8 @@ The staged-emergence result is not an artifact of one exact cutoff choice. Recom
 - matching-slot faithfulness threshold `0.80` to `0.90` with family-min gate fixed at `0.75`: births stay late and sparse at `40`, `57`, `99`, and `122`, with two persistent non-births
 
 So the exact epoch numbers are threshold-dependent in the expected way, but the paper's main conclusion survives: birth times remain widely spread, and the ordering of behavior, copy, routing, and matching-related milestones still fails to collapse into one universal trajectory.
+
+This also clarifies what a birth epoch means in the paper. It should be read as the first robust crystallization of a metric under the stated threshold and family-min gate, not as the literal first moment when the model begins to use the underlying computation at all. Different runs can therefore share similar partial computations while differing substantially in when those computations become clean, stable, and probe-friendly.
 
 ### Matching-Slot Is The Hardest Part To Cleanly Localize
 
@@ -447,6 +457,8 @@ What the six-run matrix shows:
 That pattern is stronger than a single weak probe result. It says the model is often using slot matching causally, but usually not as one neat probe-friendly axis. Matching appears to be the most distributed or implicit part of the retrieval motif.
 
 That interpretation is also consistent with superposition-style accounts of overlapping internal structure [(Anthropic, 2022)](https://www.anthropic.com/research/toy-models-of-superposition), [(Anthropic, 2023)](https://www.anthropic.com/research/towards-monosemanticity-decomposing-language-models-with-dictionary-learning).
+
+The current batteries narrow the question without fully resolving it. The sparse-feature and neuron summaries argue against one dominant local carrier, and the representation-drift summaries point to late layer-2 writeout as the least stabilized site in the matrix. Taken together, the current evidence is most consistent with slot matching being implemented as a distributed constraint that only becomes partially readable near late writeout, not as one clean intermediate variable.
 
 ### Additional Signals Hidden In The Summaries
 
@@ -474,6 +486,8 @@ This summary figure compresses the grouped evidence behind the main interpretati
 - routing is more stable at the profile level than raw head names alone suggest
 - curriculum-on runs reorganize more while assembling the mechanism
 - curriculum mainly improves the consistency of matching-slot faithfulness, not the ability to solve the task
+
+That last dissociation is striking enough to deserve a cautious interpretation. In this six-run matrix, curriculum-on is associated with more head turnover and more reliable matching-slot faithfulness, but that pattern is still an observation rather than a settled mechanism claim. One plausible hypothesis is that the easier early curriculum stabilizes the slot relation at the level of function before the exact carrier head fully settles. On that reading, curriculum-on helps matching become more reliably usable while leaving more freedom in which head realizes parts of the motif. The evidence supports the dissociation itself more strongly than this explanation, and more seeds would be needed to establish it confidently.
 
 <a id="formation"></a>
 ## Empirical Answer: How The Circuit Forms
@@ -592,6 +606,10 @@ That staged motif looks like this:
 - very strong query-key and selected-value structure by the end, even though strict sitewise faithfulness is not perfectly uniform in every seed
 - a slot-matching computation that is real but often more distributed and later-settling than the other parts
 
+These results should be read as empirical regularities for a future formation theory, not as a mathematical explanation of why gradient descent selects this motif. What the paper establishes is the pattern a later theory would need to explain: a stable downstream retrieval role, a less head-stable upstream support component, widely varying birth times across runs, and a matching computation that is causally involved but unusually distributed.
+
+At the same time, the page does not support the stronger claim that these regularities already separate architectural necessity from learned preference. In a model with only four total attention heads, a two-stage computation has limited places to live. So the contribution here is best read as identifying a real and repeatedly recovered motif in a constrained regime, and as establishing a baseline for future scaling comparisons, while leaving open how much of that motif remains once the model has many more degrees of freedom.
+
 <a id="limits"></a>
 ## Limits
 
@@ -605,6 +623,8 @@ It does not yet show:
 - a closed-form mathematical derivation of circuit formation
 
 Those are the current boundary of the evidence, not hidden exceptions.
+
+The scale limitation is also stronger than simple parameter count. With only four total attention heads, there are relatively few ways to distribute a two-stage retrieval computation. So the observed layer-1 support plus layer-2 retrieval organization may be partly architectural pressure in this regime, not a broad claim about how larger transformers must organize themselves. One intended value of the page is therefore to establish this constrained setting as a baseline for future scaling comparisons.
 
 <a id="related-work"></a>
 ## Related Work And References
